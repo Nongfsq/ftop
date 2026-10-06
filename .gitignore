@@ -1,0 +1,22 @@
+# macOS and editors
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Secrets and local logs
+.env
+.env.*
+!.env.example
+*.log
+
+# Retired btop-based code, kept locally only
+/archive/
+
+# Design sources stay local; the owner keeps the canvas privately
+/design/
+
+# Agent worktrees
+/.claude/worktrees/
+.build/
+build/
