@@ -3,6 +3,9 @@
 <p align="center">给 Apple Silicon Mac 用的一个小而安静的系统监视器。<br>一块浮动的玻璃面板，任何尺寸都能用。</p>
 <p align="center"><a href="README.md">English</a></p>
 
+> **还在用 0.1.0？** 这一版不会自己更新。请按[安装](#安装)里的步骤手动装一次
+> [最新版本](https://github.com/Nongfsq/ftop/releases/latest)；从 0.1.1 起 ftop 会自动保持最新。
+
 ![同一块面板的六种尺寸](docs/media/sizes.png)
 
 ## 它是做什么的

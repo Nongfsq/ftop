@@ -3,6 +3,10 @@
 <p align="center">A small, quiet system monitor for Apple Silicon Macs.<br>One floating glass panel that works at any size.</p>
 <p align="center"><a href="README.zh-CN.md">中文说明</a></p>
 
+> **On 0.1.0?** That version cannot update itself. Install
+> [the latest release](https://github.com/Nongfsq/ftop/releases/latest) by hand once, as
+> in [Install](#install); from 0.1.1 on ftop keeps itself up to date.
+
 ![The same panel at six sizes](docs/media/sizes.png)
 
 ## What it is for
