@@ -1,6 +1,6 @@
 """Composes the README pictures from panel frames rendered by the test suite.
 
-Usage: readme_media.py <frames directory> <output directory>. Needs Pillow.
+Usage: readme_media.py <frames directory> <output directory> [settings render]. Needs Pillow.
 The frames are the panel's own drawing with sample readings on a transparent
 background; this script puts them on a stand-in wallpaper behind a frosted pane,
 which is what the window's glass material does on a real desktop.
@@ -70,3 +70,12 @@ panel = frame("1049x500")
 canvas = wallpaper(panel.width + 240, panel.height + 240)
 place(canvas, panel, 120, 110)
 canvas.save(out / "large.png", optimize=True)
+
+# 3. The settings window. The render has a transparent background and dark text, which
+# disappears on a dark page, so it gets the window's own light background.
+if len(sys.argv) > 3:
+    content = Image.open(sys.argv[3]).convert("RGBA")
+    window = Image.new("RGBA", content.size, (0, 0, 0, 0))
+    window.paste(Image.new("RGBA", content.size, (236, 236, 236, 255)), (0, 0), rounded_mask(content.size, 24))
+    window.alpha_composite(content)
+    window.save(out / "settings.png", optimize=True)

@@ -86,6 +86,9 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
             Strings.language = language
             let content = SettingsWindowController(config: Config()).makeContent()
             let window = NSWindow(contentRect: .zero, styleMask: [.titled], backing: .buffered, defer: false)
+            // Always the light look, whatever the system is set to: the picture gets a light background.
+            window.appearance = NSAppearance(named: .aqua)
+            content.appearance = NSAppearance(named: .aqua)
             window.contentView = content
             window.layoutIfNeeded()
             let bitmap = try #require(content.bitmapImageRepForCachingDisplay(in: content.bounds))
