@@ -25,6 +25,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private let model = PanelModel()
     private let sampler = SystemSampler()
+    private let updater = Updater()
+    private var updateTimer: Timer?
     private var panel: FloatingPanel!
     private var statusItem: NSStatusItem?
     private var configWatcher: DispatchSourceFileSystemObject?
@@ -40,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     static let defaultSize = NSSize(width: 300, height: 420)
     static let choiceKey = "layoutChoice"
     static let machineKey = "machineShape"
+    static let startHiddenKey = "startHidden"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         model.apply(ConfigStore.load())
@@ -50,9 +53,77 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         watchConfig()
         updateMotion()
         model.render()
-        panel.orderFrontRegardless()
+        // An update that restarted a hidden panel leaves it hidden.
+        if UserDefaults.standard.bool(forKey: Self.startHiddenKey) {
+            UserDefaults.standard.removeObject(forKey: Self.startHiddenKey)
+        } else {
+            panel.orderFrontRegardless()
+        }
         updateSampling()
+        startUpdates()
     }
+
+    // MARK: Updates
+
+    private func startUpdates() {
+        updater.mode = model.config.updates
+        updater.onChange = { [weak self] in
+            guard let self else { return }
+            self.model.canvas.menu = self.buildMenu()
+            self.settings?.setUpdateStatus(self.updateStatus, action: self.updateAction)
+        }
+        updater.willRelaunch = { [weak self] in
+            guard let self, !self.panel.isVisible else { return }
+            UserDefaults.standard.set(true, forKey: Self.startHiddenKey)
+        }
+        // Not during launch; then whenever a day has passed, looked at once an hour.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+            MainActor.assumeIsolated { self?.updater.checkIfDue() }
+        }
+        let timer = Timer(timeInterval: 3600, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.updater.checkIfDue() }
+        }
+        timer.tolerance = 600
+        RunLoop.main.add(timer, forMode: .common)
+        updateTimer = timer
+    }
+
+    /// One line for the settings window.
+    private var updateStatus: String {
+        let version = Updater.current.map { Strings.pick("Version \($0)", "版本 \($0)") } ?? Strings.pick("Not an installed app", "不是已安装的应用")
+        let detail: String? =
+            switch updater.state {
+            case .idle: nil
+            case .checking: Strings.pick("checking…", "正在检查…")
+            case .upToDate: Strings.pick("up to date", "已是最新")
+            case .available(let found): Strings.pick("\(found) available", "可更新到 \(found)")
+            case .installing(let found): Strings.pick("installing \(found)…", "正在安装 \(found)…")
+            case .failed: Strings.pick("could not check", "检查失败")
+            }
+        return detail.map { version + " · " + $0 } ?? version
+    }
+
+    /// The button beside it: install what was found, else look.
+    private var updateAction: String {
+        if case .available(let found) = updater.state, Updater.canInstall { return Strings.pick("Install \(found)", "安装 \(found)") }
+        return Strings.pick("Check Now", "立即检查")
+    }
+
+    /// The settings button: installs only when asked to, or when that is the setting.
+    private func updateButtonPressed() {
+        if case .available = updater.state {
+            updater.installFound()
+        } else {
+            Task { await updater.check(install: model.config.updates == .install) }
+        }
+    }
+
+    /// `ftop update`: look now and install.
+    @objc private func checkForUpdate() {
+        Task { await updater.check(install: true) }
+    }
+
+    @objc private func installUpdate() { updater.installFound() }
 
     /// Layout sizes depend on the core counts, so they must be known before the window
     /// is sized. They are remembered between launches; the first launch reads them.
@@ -334,6 +405,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let layoutChanged = model.apply(config)
         applyFloating()
         updateStatusItem()
+        updater.mode = config.updates
         model.canvas.menu = buildMenu()
         settings?.refresh(config: config)
         if layoutChanged { relayout() } else { model.render() }
@@ -379,12 +451,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         remote.addObserver(self, selector: #selector(togglePanel), name: Notification.Name("dev.ftop.app.toggle"), object: nil)
         remote.addObserver(self, selector: #selector(quit), name: Notification.Name("dev.ftop.app.quit"), object: nil)
         remote.addObserver(self, selector: #selector(resize(_:)), name: Notification.Name("dev.ftop.app.size"), object: nil)
+        remote.addObserver(self, selector: #selector(checkForUpdate), name: Notification.Name("dev.ftop.app.update"), object: nil)
     }
 
     @objc private func environmentChanged() { updateMotion() }
     @objc private func screensChanged() { pullOnScreen() }
     /// Counters jump across sleep; restart so the first sample after wake is a clean baseline.
-    @objc private func didWake() { updateSampling(restart: true) }
+    @objc private func didWake() {
+        updateSampling(restart: true)
+        updater.checkIfDue()
+    }
 
     // MARK: Commands
 
@@ -444,8 +520,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 self?.apply(config)
             }
             controller.onOpenFile = { [weak self] in self?.openConfig() }
+            controller.onCheckUpdate = { [weak self] in self?.updateButtonPressed() }
             settings = controller
         }
+        settings?.setUpdateStatus(updateStatus, action: updateAction)
         settings?.show(config: model.config)
     }
 
@@ -468,6 +546,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             item.state = checked ? .on : .off
             menu.addItem(item)
             return item
+        }
+        if case .available(let version) = updater.state, Updater.canInstall {
+            _ = add(Strings.pick("Install Update \(version)", "安装更新 \(version)"), #selector(installUpdate))
+            menu.addItem(.separator())
         }
         if panel?.isVisible == true {
             _ = add(Strings.pick("Hide Panel", "收起面板"), #selector(hidePanel))

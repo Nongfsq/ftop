@@ -98,6 +98,17 @@ ftop doctor     # which readings are available on this Mac, and why not
 Settings are also a plain text file, `~/.config/ftop/config.json5` (JSON with
 comments). The window and the file stay in step, and a saved change applies at once.
 
+### Updates
+
+ftop looks for a newer release once a day and installs it: it downloads the release
+from this repository, checks it, replaces `Ftop.app`, and restarts the panel. In
+**Settings…** you can switch this to *Check Only* (the update is then offered in the
+right-click menu) or *Off* (ftop never goes online). `ftop update` looks right now and
+`ftop version` prints what is installed.
+
+An update never changes the helper that `sudo ftop grant` installed. If a new version
+needs a newer helper, `ftop doctor` says so and you grant again.
+
 ### System processes
 
 Without extra rights macOS only lets ftop see your own processes. To include system
