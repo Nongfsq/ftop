@@ -3,7 +3,7 @@
 <p align="center">给 Apple Silicon Mac 用的一个小而安静的系统监视器。<br>一块浮动的玻璃面板，任何尺寸都能用。</p>
 <p align="center"><a href="README.md">English</a></p>
 
-![ftop 依次切换各种布局，从菜单栏大小的小条到完整面板](docs/media/demo.gif)
+![同一块面板的六种尺寸](docs/media/sizes.png)
 
 ## 它是做什么的
 
@@ -25,8 +25,6 @@ ftop 用来替代你常年开在终端标签页里的监视工具（btop、htop�
 它只显示当前状态：没有历史曲线，没有磁盘面板。
 
 ## 一块面板，各种尺寸
-
-![同一块面板的六种尺寸](docs/media/sizes.png)
 
 小窗口只留要点；大窗口显示更多内容，而不是把字放大：每个核心的数字、最多 24 行进程、
 再加一列按内存排序的进程。

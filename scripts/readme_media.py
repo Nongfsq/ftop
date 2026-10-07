@@ -70,32 +70,3 @@ panel = frame("1049x500")
 canvas = wallpaper(panel.width + 240, panel.height + 240)
 place(canvas, panel, 120, 110)
 canvas.save(out / "large.png", optimize=True)
-
-# 3. An animation through the sizes, with the readings moving.
-order = ["64x26", "280x30", "200x150", "300x420", "480x260", "660x230", "1049x500"]
-count = len(list(frames.glob(f"{order[0]}-*.png")))
-# A flat backdrop: 255 colors cannot carry a gradient without visible bands, and the
-# panel needs them all.
-base = Image.new("RGB", (2000, 1160), (30, 32, 52))
-shots, durations = [], []
-previous = None
-for size in order:
-    for index in range(count):
-        shot = base.copy()
-        panel = frame(size, index)
-        place(shot, panel, (shot.width - panel.width) // 2, (shot.height - panel.height) // 2)
-        shot = shot.resize((1000, 580), Image.LANCZOS)
-        if index == 0 and previous is not None:
-            for step in (0.34, 0.67):
-                shots.append(Image.blend(previous, shot, step))
-                durations.append(60)
-        shots.append(shot)
-        durations.append(900 if index == count - 1 else 130)
-        previous = shot
-# One palette for every frame, taken from the smallest and the largest layouts together.
-sheet = Image.new("RGB", (1000, 1160))
-sheet.paste(shots[-1], (0, 0))
-sheet.paste(shots[len(shots) // 2], (0, 580))
-palette = sheet.quantize(colors=255, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
-indexed = [shot.quantize(palette=palette, dither=Image.Dither.NONE) for shot in shots]
-indexed[0].save(out / "demo.gif", save_all=True, append_images=indexed[1:], duration=durations, loop=0, optimize=False, disposal=1)

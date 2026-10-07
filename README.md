@@ -3,7 +3,7 @@
 <p align="center">A small, quiet system monitor for Apple Silicon Macs.<br>One floating glass panel that works at any size.</p>
 <p align="center"><a href="README.zh-CN.md">中文说明</a></p>
 
-![ftop stepping through its layouts, from a menu-bar-sized pill to a full panel](docs/media/demo.gif)
+![The same panel at six sizes](docs/media/sizes.png)
 
 ## What it is for
 
@@ -27,8 +27,6 @@ and which process is responsible.
 It shows the current state only: no history graphs, no disk panels.
 
 ## One panel, every size
-
-![The same panel at six sizes](docs/media/sizes.png)
 
 A small window keeps the essentials; a large window shows more, not bigger type —
 per-core numbers, up to 24 process rows, and a second list sorted by memory.

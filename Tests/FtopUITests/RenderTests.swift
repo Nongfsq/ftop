@@ -11,7 +11,7 @@ import Testing
 ///     FTOP_RENDER_DIR=/tmp/ftop-render swift test --filter RenderTests
 private let renderDirectory = ProcessInfo.processInfo.environment["FTOP_RENDER_DIR"]
 /// Frames for the README pictures (`scripts/readme-media.sh`): the panel alone on a
-/// transparent background, with sample readings that move from frame to frame.
+/// transparent background, with sample readings.
 private let demoDirectory = ProcessInfo.processInfo.environment["FTOP_DEMO_DIR"]
 
 @MainActor
@@ -84,7 +84,6 @@ private let demoDirectory = ProcessInfo.processInfo.environment["FTOP_DEMO_DIR"]
     }
 
     static let demoSizes: [(Double, Double)] = [(64, 26), (280, 30), (200, 150), (300, 420), (480, 260), (660, 230), (860, 500), (1049, 500)]
-    static let demoFrames = 13
 
     /// Sample readings at time `t`; whole numbers are the states the panel rests on.
     static func demoSnapshot(_ t: Double) -> Snapshot {
@@ -108,7 +107,8 @@ private let demoDirectory = ProcessInfo.processInfo.environment["FTOP_DEMO_DIR"]
         let directory = URL(fileURLWithPath: demoDirectory!)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         for (width, height) in Self.demoSizes {
-            for frame in 0..<Self.demoFrames {
+            do {
+                let frame = 0
                 let model = PanelModel()
                 var config = Config()
                 config.motion = false
