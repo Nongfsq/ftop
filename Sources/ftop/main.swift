@@ -176,6 +176,19 @@ case "doctor": doctor()
 case "grant": grant()
 case "revoke": revoke()
 case "config": print(Config.fileURL.path)
+case "version":
+    guard let bundle = appBundleURL(), let version = Bundle(url: bundle)?.infoDictionary?["CFBundleShortVersionString"] as? String else {
+        fail("ftop: this command is not inside Ftop.app, so it has no version.")
+    }
+    print(version)
+case "update":
+    // The panel does the work: it is the app that gets replaced and restarted.
+    if !isRunning() {
+        open()
+        Thread.sleep(forTimeInterval: 2)
+    }
+    post("update")
+    print("Asked the panel to look for a newer version. It installs one and restarts; `ftop version` shows the result.")
 case "help", "-h", "--help":
     print(
         """
@@ -186,6 +199,8 @@ case "help", "-h", "--help":
         ftop probe      print one reading of every sensor (--json for the raw snapshot)
         ftop doctor     list which readings are available and why not (--states for raw CPU states)
         ftop config     print the path of the settings file
+        ftop version    print the installed version
+        ftop update     look for a newer version now and install it
         sudo ftop grant   let ftop read system processes (one time); `sudo ftop revoke` undoes it
         """)
 default:

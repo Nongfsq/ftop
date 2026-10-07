@@ -30,6 +30,8 @@ public struct Config: Sendable, Codable, Equatable {
     public var floating: Bool = false
     /// Show the CPU percentage in the menu bar; clicking it shows or hides the panel.
     public var menuBar: Bool = true
+    /// New releases: install them, only offer them, or never look.
+    public var updates: UpdateMode = .install
 
     public init() {}
 
@@ -44,6 +46,7 @@ public struct Config: Sendable, Codable, Equatable {
         maxProcesses = try container.decodeIfPresent(Int.self, forKey: .maxProcesses) ?? defaults.maxProcesses
         floating = try container.decodeIfPresent(Bool.self, forKey: .floating) ?? defaults.floating
         menuBar = try container.decodeIfPresent(Bool.self, forKey: .menuBar) ?? defaults.menuBar
+        updates = try container.decodeIfPresent(UpdateMode.self, forKey: .updates) ?? defaults.updates
         normalize()
     }
 
@@ -95,6 +98,10 @@ public struct Config: Sendable, Codable, Equatable {
 
           // Show the CPU percentage in the menu bar; click it to show or hide the panel.
           menuBar: true,
+
+          // New versions: "install" looks once a day and installs what it finds, "check"
+          // only offers it in the right-click menu, "off" never goes online.
+          updates: "install",
         }
 
         """

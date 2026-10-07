@@ -84,7 +84,9 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         for language in [Language.en, .zh] {
             Strings.language = language
-            let content = SettingsWindowController(config: Config()).makeContent()
+            let controller = SettingsWindowController(config: Config())
+            controller.setUpdateStatus(Strings.pick("Version 0.1.1 · up to date", "版本 0.1.1 · 已是最新"), action: Strings.pick("Check Now", "立即检查"))
+            let content = controller.makeContent()
             let window = NSWindow(contentRect: .zero, styleMask: [.titled], backing: .buffered, defer: false)
             // Always the light look, whatever the system is set to: the picture gets a light background.
             window.appearance = NSAppearance(named: .aqua)

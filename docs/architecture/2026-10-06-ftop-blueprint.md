@@ -400,3 +400,22 @@ Recorded 2026-10-06. Each item replaces the matching decision or amendment above
   of per-sample work spread over many small items, not the size of the type. Slowing
   the small core numbers to every other sample was tried and reverted: no measurable gain.
 
+
+## Amendment: updates (2026-10-06)
+
+- Decision: ftop checks GitHub's latest release of Nongfsq/ftop once a day and, by
+  default, installs it (`updates: "install" | "check" | "off"` in the settings file).
+  Asked for by the owner together with the 0.1.1 release. Compared: Sparkle (a
+  dependency and an appcast to host, built for Developer ID signed apps) versus a
+  small updater over the releases the project already publishes (selected).
+- Shape: `FtopCore/Update.swift` holds the version order and the reading of the
+  release answer (tested); `FtopApp/Updater.swift` downloads, checks, swaps the
+  bundle, and restarts. It is the only code in ftop that goes online.
+- Trust: releases are ad-hoc signed, so authenticity rests on HTTPS to github.com and
+  on the archive address being this repository's release downloads. The archive must
+  match the SHA-256 the release states, hold `dev.ftop.app` at exactly the announced
+  version, and pass `codesign --verify`. Only a newer version is installed.
+- Root: the updater replaces the user-owned app bundle only. The setuid helper at
+  `/usr/local/libexec/ftop` is never written by it; a release cannot change what runs
+  as root without the owner running `sudo ftop grant` again.
+- Revisit when: releases are signed with a Developer ID (then verify the signer).

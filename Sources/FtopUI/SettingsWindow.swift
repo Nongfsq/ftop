@@ -8,9 +8,14 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
     /// Called with the new settings and the one `key: value` line that changed.
     public var onChange: ((Config, String, String) -> Void)?
     public var onOpenFile: (() -> Void)?
+    public var onCheckUpdate: (() -> Void)?
 
     private var config: Config
     private var window: NSWindow?
+    private var updateStatus = ""
+    private var updateAction = ""
+    private weak var updateLabel: NSTextField?
+    private weak var updateButton: NSButton?
 
     private static let intervals: [Double] = [0.5, 1, 2, 5, 10]
     private static let rowCounts = [3, 5, 7, 9, 12, 16, 24]
@@ -34,6 +39,15 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         guard config != self.config, let window, window.isVisible else { return }
         self.config = config
         window.contentView = makeContent()
+    }
+
+    /// The installed version and what the last check for a newer one found.
+    /// `action` names the button: check, or install what was found.
+    public func setUpdateStatus(_ text: String, action: String) {
+        updateStatus = text
+        updateAction = action
+        updateLabel?.stringValue = text
+        updateButton?.title = action
     }
 
     private func makeWindow() -> NSWindow {
@@ -86,6 +100,25 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         let file = NSButton(title: Strings.pick("Open Settings File…", "打开设置文件…"), target: self, action: #selector(openFile))
         file.bezelStyle = .rounded
 
+        let modes = UpdateMode.allCases
+        let modeNames = modes.map { mode in
+            switch mode {
+            case .install: Strings.pick("Install Automatically", "自动安装")
+            case .check: Strings.pick("Check Only", "仅检查")
+            case .off: Strings.pick("Off", "关闭")
+            }
+        }
+        let check = NSButton(title: updateAction, target: self, action: #selector(checkUpdate))
+        check.bezelStyle = .rounded
+        check.controlSize = .small
+        let status = NSTextField(labelWithString: updateStatus)
+        status.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+        status.textColor = .secondaryLabelColor
+        updateLabel = status
+        updateButton = check
+        let update = NSStackView(views: [check, status])
+        update.spacing = 8
+
         let rows: [[NSView]] = [
             [
                 label(Strings.pick("Colors:", "配色：")),
@@ -104,6 +137,8 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             [label(Strings.pick("Window:", "窗口：")), checkbox(Strings.pick("Keep on top", "置顶"), on: config.floating, action: #selector(floatingChanged(_:)))],
             [NSGridCell.emptyContentView, checkbox(Strings.pick("Show CPU in the menu bar", "在菜单栏显示 CPU"), on: config.menuBar, action: #selector(menuBarChanged(_:)))],
             [NSGridCell.emptyContentView, checkbox(Strings.pick("Smooth column motion", "柱子平滑过渡"), on: config.motion, action: #selector(motionChanged(_:)))],
+            [label(Strings.pick("Updates:", "更新：")), popup(modeNames, selected: modes.firstIndex(of: config.updates) ?? 0, action: #selector(updatesChanged(_:)))],
+            [NSGridCell.emptyContentView, update],
             [NSGridCell.emptyContentView, file],
         ]
         let grid = NSGridView(views: rows)
@@ -114,7 +149,8 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         grid.row(at: 4).rowAlignment = .none
         grid.row(at: 4).yPlacement = .top
         grid.row(at: 5).topPadding = 6
-        grid.row(at: 8).topPadding = 8
+        grid.row(at: 8).topPadding = 6
+        grid.row(at: 10).topPadding = 8
         grid.translatesAutoresizingMaskIntoConstraints = false
 
         let content = NSView()
@@ -198,5 +234,11 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         commit("motion", config.motion ? "true" : "false")
     }
 
+    @objc private func updatesChanged(_ sender: NSPopUpButton) {
+        config.updates = UpdateMode.allCases[sender.indexOfSelectedItem]
+        commit("updates", "\"\(config.updates.rawValue)\"")
+    }
+
+    @objc private func checkUpdate() { onCheckUpdate?() }
     @objc private func openFile() { onOpenFile?() }
 }

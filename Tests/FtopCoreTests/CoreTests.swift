@@ -141,6 +141,53 @@ import Testing
     }
 }
 
+@Suite struct UpdateTests {
+    private static func feed(tag: String = "v0.2.0", name: String = "Ftop-0.2.0-arm64.zip", host: String = "github.com/Nongfsq/ftop", prerelease: Bool = false) -> Data {
+        Data(
+            """
+            {"tag_name": "\(tag)", "draft": false, "prerelease": \(prerelease), "assets": [
+              {"name": "notes.txt", "browser_download_url": "https://\(host)/releases/download/\(tag)/notes.txt"},
+              {"name": "\(name)", "browser_download_url": "https://\(host)/releases/download/\(tag)/\(name)",
+               "digest": "sha256:\(String(repeating: "ab", count: 32))"}]}
+            """.utf8)
+    }
+
+    @Test func versionsCompareByNumber() throws {
+        let old = try #require(AppVersion("0.1.9"))
+        let new = try #require(AppVersion("v0.1.10"))
+        #expect(old < new)
+        #expect(AppVersion("0.2") == AppVersion("0.2.0"))
+        #expect(new.description == "0.1.10")
+        #expect(try #require(AppVersion("1")) > new)
+    }
+
+    @Test func versionsThatAreNotNumbersAreRejected() {
+        for text in ["", "v", "1..2", "1.2-beta", "1.x", "../1", "1.2.3.4.5", "１.2"] { #expect(AppVersion(text) == nil) }
+    }
+
+    @Test func releaseIsReadFromTheFeed() throws {
+        let release = try #require(UpdateFeed.release(from: Self.feed()))
+        #expect(release.version == AppVersion("0.2.0"))
+        #expect(release.archive.absoluteString == "https://github.com/Nongfsq/ftop/releases/download/v0.2.0/Ftop-0.2.0-arm64.zip")
+        #expect(release.sha256 == String(repeating: "ab", count: 32))
+    }
+
+    @Test func releasesThatCannotBeTrustedAreIgnored() {
+        #expect(UpdateFeed.release(from: Self.feed(host: "example.com/Nongfsq/ftop")) == nil)  // archive from elsewhere
+        #expect(UpdateFeed.release(from: Self.feed(name: "Ftop-0.3.0-arm64.zip")) == nil)  // archive of another version
+        #expect(UpdateFeed.release(from: Self.feed(tag: "nightly")) == nil)
+        #expect(UpdateFeed.release(from: Self.feed(prerelease: true)) == nil)
+        #expect(UpdateFeed.release(from: Data("{}".utf8)) == nil)
+        #expect(UpdateFeed.release(from: Data("not json".utf8)) == nil)
+    }
+
+    @Test func updatesSettingIsReadFromTheFile() throws {
+        #expect(try Config.decode(Data("{}".utf8)).updates == .install)
+        #expect(try Config.decode(Data("{updates: \"off\"}".utf8)).updates == .off)
+        #expect(try Config.decode(Data(Config.template.utf8)) == Config())
+    }
+}
+
 @Suite struct LayoutLadderTests {
     /// A stand-in for measured sizes: richer layouts need more room.
     static func measure(_ candidate: LayoutCandidate) -> Extent {
