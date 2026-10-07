@@ -1,7 +1,5 @@
 #!/bin/bash
-# Builds a release and assembles build/Ftop.app. By default it is ad-hoc signed, which
-# only suits this machine; set FTOP_SIGN_IDENTITY to a "Developer ID Application: ..."
-# certificate name to sign a copy that can be notarized (see scripts/release.sh).
+# Builds a release and assembles build/Ftop.app, ad-hoc signed for this machine.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -17,10 +15,6 @@ cp Support/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
 # case-insensitive disk.
 cp "$bin/FtopApp" "$app/Contents/MacOS/FtopPanel"
 cp "$bin/ftop" "$bin/ftop-helper" "$app/Contents/MacOS/"
-identity="${FTOP_SIGN_IDENTITY:--}"
-options=()
-# Notarization requires the hardened runtime and a secure timestamp.
-[ "$identity" = "-" ] || options=(--options runtime --timestamp)
-codesign --force --sign "$identity" ${options[@]+"${options[@]}"} "$app/Contents/MacOS/ftop-helper" "$app/Contents/MacOS/ftop"
-codesign --force --sign "$identity" ${options[@]+"${options[@]}"} "$app"
+codesign --force --sign - "$app/Contents/MacOS/ftop-helper" "$app/Contents/MacOS/ftop"
+codesign --force --sign - "$app"
 echo "Built $app"
