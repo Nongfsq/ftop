@@ -46,8 +46,24 @@ ftop 用来替代你常年开在终端标签页里的监视工具（btop、htop�
 
 ## 安装
 
-要求：Apple Silicon Mac，macOS 15 或更新，以及 Xcode（用 Xcode 27 构建和测试）。目前
-没有现成的安装包。
+要求：Apple Silicon Mac，macOS 15 或更新。
+
+**用发布包。** 在[发布页](https://github.com/Nongfsq/ftop/releases/latest)下载
+`Ftop-<版本>-arm64.zip`，解压后把 `Ftop.app` 移到 `~/Applications`。然后把命令链接到
+`PATH` 里的某个目录：
+
+```bash
+mkdir -p ~/.local/bin && ln -sfn ~/Applications/Ftop.app/Contents/MacOS/ftop ~/.local/bin/ftop
+```
+
+这个应用只做了本机签名，没有经过苹果公证，所以用浏览器下载的副本会被 macOS 拦住。
+清除一次下载标记即可：
+
+```bash
+xattr -dr com.apple.quarantine ~/Applications/Ftop.app
+```
+
+**从源码构建。** 需要 Xcode（用 Xcode 27 构建和测试）。
 
 ```bash
 git clone https://github.com/Nongfsq/ftop.git
@@ -57,8 +73,7 @@ git clone https://github.com/Nongfsq/ftop.git
 cd ftop && scripts/bundle.sh && scripts/install.sh
 ```
 
-这会把 `Ftop.app` 放进 `~/Applications`，并把 `ftop` 命令链接到 `~/.local/bin`，该目录
-需要在你的 `PATH` 里。
+这会把 `Ftop.app` 放进 `~/Applications`，并把 `ftop` 链接到 `~/.local/bin`。
 
 ## 使用
 

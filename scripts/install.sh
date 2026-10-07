@@ -1,10 +1,18 @@
 #!/bin/bash
-# Installs build/Ftop.app into ~/Applications and links the `ftop` command.
+# Installs Ftop.app into ~/Applications and links the `ftop` command.
+# With no argument it installs build/Ftop.app, building it first if needed;
+# pass the path of an unpacked release to install that instead.
 set -euo pipefail
-cd "$(dirname "$0")/.."
 
-app="build/Ftop.app"
-[ -d "$app" ] || scripts/bundle.sh
+if [ $# -gt 0 ]; then
+    app="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+    [ -x "$app/Contents/MacOS/ftop" ] || { echo "Not an Ftop.app: $1" >&2; exit 1; }
+fi
+cd "$(dirname "$0")/.."
+if [ $# -eq 0 ]; then
+    app="build/Ftop.app"
+    [ -d "$app" ] || scripts/bundle.sh
+fi
 
 target="$HOME/Applications/Ftop.app"
 link="${FTOP_BIN_DIR:-$HOME/.local/bin}/ftop"

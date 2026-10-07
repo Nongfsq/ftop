@@ -42,7 +42,7 @@ verified: 2026-10-06 · owner rules: AGENTS.md · status tokens: off
 ## Delivery
 - license: MIT (source: LICENSE)
 - ci: none; do not add GitHub Actions without the owner asking (source: legacy AGENTS.md in the archive, user-stated)
-- deploy: local install only, `scripts/install.sh` into ~/Applications and ~/.local/bin (source: scripts/install.sh)
+- deploy: `scripts/install.sh` into ~/Applications and ~/.local/bin; releases are a tag `v<version>` with `Ftop-<version>-arm64.zip` attached, ad-hoc signed and not notarized (source: scripts/install.sh, github.com/Nongfsq/ftop/releases)
 
 ## Skill applicability
 - frank-deploy, frank-github-actions-ci: not applicable — no CI or hosting (source: Delivery)

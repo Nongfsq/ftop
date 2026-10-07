@@ -49,8 +49,24 @@ Measured with `scripts/perf.sh` on a 14-core Apple Silicon Mac, updating once a 
 
 ## Install
 
-Requirements: an Apple Silicon Mac, macOS 15 or later, and Xcode (built and tested
-with Xcode 27). There is no prebuilt download yet.
+Requirements: an Apple Silicon Mac with macOS 15 or later.
+
+**From a release.** Download `Ftop-<version>-arm64.zip` from the
+[releases page](https://github.com/Nongfsq/ftop/releases/latest), unpack it, and move
+`Ftop.app` to `~/Applications`. Then link the command into a directory on your `PATH`:
+
+```bash
+mkdir -p ~/.local/bin && ln -sfn ~/Applications/Ftop.app/Contents/MacOS/ftop ~/.local/bin/ftop
+```
+
+The app is signed for local use only and is not notarized by Apple, so macOS blocks a
+copy downloaded with a browser. Clear the download mark once:
+
+```bash
+xattr -dr com.apple.quarantine ~/Applications/Ftop.app
+```
+
+**From source.** Needs Xcode (built and tested with Xcode 27).
 
 ```bash
 git clone https://github.com/Nongfsq/ftop.git
@@ -60,8 +76,7 @@ git clone https://github.com/Nongfsq/ftop.git
 cd ftop && scripts/bundle.sh && scripts/install.sh
 ```
 
-This puts `Ftop.app` in `~/Applications` and links the `ftop` command into
-`~/.local/bin`, which must be on your `PATH`.
+This puts `Ftop.app` in `~/Applications` and links `ftop` into `~/.local/bin`.
 
 ## Use
 
