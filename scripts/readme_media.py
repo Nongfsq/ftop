@@ -74,7 +74,9 @@ canvas.save(out / "large.png", optimize=True)
 # 3. An animation through the sizes, with the readings moving.
 order = ["64x26", "280x30", "200x150", "300x420", "480x260", "660x230", "1049x500"]
 count = len(list(frames.glob(f"{order[0]}-*.png")))
-base = wallpaper(2000, 1160)
+# A flat backdrop: 255 colors cannot carry a gradient without visible bands, and the
+# panel needs them all.
+base = Image.new("RGB", (2000, 1160), (30, 32, 52))
 shots, durations = [], []
 previous = None
 for size in order:
