@@ -180,7 +180,13 @@ public enum Strings {
     static var pressureWords: [String] { [PressureLevel.normal, .warning, .critical].map(pressure) }
 
     static func core(_ core: CoreSample) -> String {
-        let kind = core.kind == .performance ? pick("Performance core", "性能核") : pick("Efficiency core", "能效核")
+        let kind =
+            switch core.tier {
+            case .superCore: pick("Super core", "超级核")
+            case .performance: pick("Performance core", "性能核")
+            case .efficiency: pick("Efficiency core", "能效核")
+            case .unknown: pick("Core", "核心")
+            }
         let frequency = core.frequencyMHz.value.map { " · \(Format.gigahertz($0)) GHz" } ?? " · " + pick("frequency unavailable", "频率不可用")
         return "\(kind) \(core.number) · \(Format.percent(core.usage))%\(frequency)"
     }

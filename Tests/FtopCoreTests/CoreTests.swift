@@ -91,6 +91,56 @@ import Testing
     }
 }
 
+@Suite struct CoreTopologyTests {
+    private static func types(_ text: String) -> [UInt8] { text.utf8.map { $0 == 46 ? 0 : $0 } }  // "." is a CPU without a type
+
+    @Test func performanceAndEfficiencyCores() {
+        // M4 Pro: efficiency cores have the low logical ids.
+        let cores = CoreTopology.classify(types: Self.types("EEEEPPPPPPPPPP"), levels: [("Performance", 10), ("Efficiency", 4)])
+        #expect(cores.prefix(4).allSatisfy { $0.kind == .efficiency && $0.tier == .efficiency && $0.rank == 1 })
+        #expect(cores.dropFirst(4).allSatisfy { $0.kind == .performance && $0.tier == .performance && $0.rank == 0 })
+    }
+
+    @Test func superAndPerformanceCoresOfAnM5Pro() {
+        // Ten 'M' cores the kernel calls "Performance" under five 'P' cores it calls "Super".
+        let cores = CoreTopology.classify(types: Self.types("MMMMMMMMMMPPPPP"), levels: [("Super", 5), ("Performance", 10)])
+        #expect(cores.prefix(10).allSatisfy { $0.kind == .efficiency && $0.tier == .performance })
+        #expect(cores.suffix(5).allSatisfy { $0.kind == .performance && $0.tier == .superCore })
+    }
+
+    @Test func equalCountsFallBackToTheLetterOrder() {
+        let cores = CoreTopology.classify(types: Self.types("EEEEPPPP"), levels: [("Super", 4), ("Efficiency", 4)])
+        #expect(cores.first?.tier == .efficiency)
+        #expect(cores.last?.kind == .performance)
+        #expect(cores.last?.tier == .superCore)
+    }
+
+    @Test func aTypeNoLevelExplainsIsShownButNotNamed() {
+        // Three types, two levels: nothing says what 'M' is called.
+        let cores = CoreTopology.classify(types: Self.types("EEMMPP"), levels: [("Performance", 4), ("Efficiency", 2)])
+        #expect(cores.map(\.rank) == [2, 2, 1, 1, 0, 0])
+        #expect(cores.map(\.tier) == [.efficiency, .efficiency, .unknown, .unknown, .performance, .performance])
+        #expect(cores.map(\.kind) == [.efficiency, .efficiency, .efficiency, .efficiency, .performance, .performance])
+    }
+
+    @Test func aLetterNeverSeenBeforeIsPlacedByItsCoreCount() {
+        let cores = CoreTopology.classify(types: Self.types("XXXXXXPP"), levels: [("Performance", 6), ("Efficiency", 2)])
+        #expect(cores.first?.kind == .performance)
+        #expect(cores.first?.tier == .performance)
+        #expect(cores.last?.tier == .efficiency)
+    }
+
+    @Test func coresWithoutATypeAreStillCores() {
+        let none = CoreTopology.classify(types: Self.types("........"), levels: [("Performance", 8)])
+        #expect(none.count == 8)
+        #expect(none.allSatisfy { $0.kind == .performance && $0.tier == .unknown })
+
+        let some = CoreTopology.classify(types: Self.types("PP.."), levels: [])
+        #expect(some.map(\.kind) == [.performance, .performance, .efficiency, .efficiency])
+        #expect(some.map(\.tier) == [.performance, .performance, .unknown, .unknown])
+    }
+}
+
 @Suite struct LayoutLadderTests {
     /// A stand-in for measured sizes: richer layouts need more room.
     static func measure(_ candidate: LayoutCandidate) -> Extent {

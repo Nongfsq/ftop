@@ -11,16 +11,16 @@ final class CPUProvider {
     private var temperature: Reading<Temperature> = .unavailable("not read yet")
     private var temperatureAge = 0
     private let sampler = ftop_cpu_sampler_create()
-    private let kinds: [CoreKind]
+    /// Cluster type letter per logical CPU from IODeviceTree, 0 where it has none.
+    private let types: [UInt8]
+    private let levels: [(name: String, count: Int)]
+    private var identities: [CoreIdentity] = []
 
     init() {
         var buffer = [CChar](repeating: 0, count: 256)
         let count = Int(ftop_cpu_cluster_types(&buffer, Int32(buffer.count)))
-        if count > 0, buffer.prefix(count).allSatisfy({ $0 == 80 || $0 == 69 }) {  // 'P' or 'E'
-            kinds = buffer.prefix(count).map { $0 == 80 ? .performance : .efficiency }
-        } else {
-            kinds = []
-        }
+        types = buffer.prefix(max(0, count)).map { UInt8(bitPattern: $0) }
+        levels = Self.readLevels()
     }
 
     deinit { ftop_cpu_sampler_destroy(sampler) }
@@ -31,34 +31,46 @@ final class CPUProvider {
         defer { previousTicks = ticks }
         let frequencies = detail ? readFrequencies() : ([:], "not read while the panel is hidden")
         guard previousTicks.count == ticks.count else { return .unavailable("waiting for a second sample") }
-        guard kinds.count == ticks.count else {
-            return .unavailable("core types unknown: IODeviceTree lists \(kinds.count) cores, the kernel reports \(ticks.count)")
+        if identities.count != ticks.count {
+            // A CPU IODeviceTree does not list has no type; it is still shown.
+            let padded = (0..<ticks.count).map { $0 < types.count ? types[$0] : 0 }
+            identities = CoreTopology.classify(types: padded, levels: levels)
         }
 
         var cores: [CoreSample] = []
-        var counters: [CoreKind: Int] = [:]
-        // Performance cores first, then efficiency cores, each in logical order.
+        var groupCounters: [CoreKind: Int] = [:]
+        var typeCounters: [UInt8: Int] = [:]
+        // Fastest cores first, each type in logical order.
         let order = ticks.indices.sorted { lhs, rhs in
-            if kinds[lhs] != kinds[rhs] { return kinds[lhs] == .performance }
+            if identities[lhs].rank != identities[rhs].rank { return identities[lhs].rank < identities[rhs].rank }
             return lhs < rhs
         }
         for logical in order {
-            let kind = kinds[logical]
-            let position = counters[kind, default: 0]
-            counters[kind] = position + 1
+            let identity = identities[logical]
+            let number = groupCounters[identity.kind, default: 0] + 1
+            groupCounters[identity.kind] = number
+            // IOReport names a core by its type letter; the nth channel of a type is its nth core.
+            let position = typeCounters[identity.type, default: 0]
+            typeCounters[identity.type] = position + 1
             let frequency: Reading<Double>
             var top: Double?
+            let letter = String(UnicodeScalar(identity.type))
             if let failure = frequencies.failure {
                 frequency = .unavailable(failure)
-            } else if let list = frequencies.cores[kind], position < list.count {
+            } else if identity.type == 0 {
+                frequency = .unavailable("IODeviceTree gives no cluster type for this core")
+            } else if let list = frequencies.cores[identity.type], list.count == types.count(where: { $0 == identity.type }) {
                 top = list[position].max_mhz > 0 ? list[position].max_mhz : nil
-                frequency = list[position].mhz > 0 ? .value(list[position].mhz) : .unavailable("frequency table does not match the reported states")
+                frequency =
+                    list[position].mhz > 0 ? .value(list[position].mhz) : .unavailable("no frequency table fits the states IOReport reports for \(letter) cores")
             } else {
-                frequency = .unavailable("IOReport reported fewer cores than the kernel")
+                frequency = .unavailable(
+                    "IOReport has \(frequencies.cores[identity.type]?.count ?? 0) \(letter)CPU channels for \(types.count(where: { $0 == identity.type })) \(letter) cores"
+                )
             }
             cores.append(
                 CoreSample(
-                    id: logical, kind: kind, number: position + 1,
+                    id: logical, kind: identity.kind, tier: identity.tier, number: number,
                     usage: Metrics.usage(previous: previousTicks[logical], current: ticks[logical]) ?? 0,
                     frequencyMHz: frequency, maxFrequencyMHz: top))
         }
@@ -72,17 +84,35 @@ final class CPUProvider {
 
     /// The raw residency states of the last sample, for `ftop doctor`.
     func describeStates() -> String {
-        var buffer = [CChar](repeating: 0, count: 4096)
+        var buffer = [CChar](repeating: 0, count: 16384)
         ftop_cpu_sampler_describe(sampler, &buffer, Int32(buffer.count))
         return buffer.withUnsafeBufferPointer { String(cString: $0.baseAddress!) }
     }
 
-    private func readFrequencies() -> (cores: [CoreKind: [ftop_core_freq]], failure: String?) {
+    /// Channels by cluster type letter, each list in channel order.
+    private func readFrequencies() -> (cores: [UInt8: [ftop_core_freq]], failure: String?) {
         var buffer = [ftop_core_freq](repeating: ftop_core_freq(), count: 128)
         let count = Int(ftop_cpu_sampler_update(sampler, &buffer, Int32(buffer.count)))
         guard count >= 0 else { return ([:], "IOReport returned no CPU sample") }
-        let list = Array(buffer.prefix(count))
-        return ([.performance: list.filter { $0.performance == 1 }, .efficiency: list.filter { $0.performance == 0 }], nil)
+        return (Dictionary(grouping: buffer.prefix(count), by: { UInt8(bitPattern: $0.kind) }), nil)
+    }
+
+    /// The kernel's performance levels, fastest first.
+    private static func readLevels() -> [(name: String, count: Int)] {
+        var levelCount: Int32 = 0
+        var size = MemoryLayout<Int32>.size
+        guard sysctlbyname("hw.nperflevels", &levelCount, &size, nil, 0) == 0 else { return [] }
+        var levels: [(name: String, count: Int)] = []
+        for level in 0..<Int(levelCount) {
+            var cpus: Int32 = 0
+            size = MemoryLayout<Int32>.size
+            guard sysctlbyname("hw.perflevel\(level).logicalcpu", &cpus, &size, nil, 0) == 0 else { return [] }
+            var name = [CChar](repeating: 0, count: 64)
+            size = name.count - 1
+            let named = sysctlbyname("hw.perflevel\(level).name", &name, &size, nil, 0) == 0
+            levels.append((named ? name.withUnsafeBufferPointer { String(cString: $0.baseAddress!) } : "", Int(cpus)))
+        }
+        return levels
     }
 
     private static func readTicks() -> [[UInt32]]? {

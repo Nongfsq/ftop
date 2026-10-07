@@ -64,7 +64,7 @@ func probe(json: Bool) {
         print("CPU \(Format.percent(cpu.usage))%")
         for core in cpu.cores {
             let frequency = core.frequencyMHz.value.map { Format.gigahertz($0) + " GHz" } ?? "frequency unavailable"
-            print("  \(core.kind == .performance ? "P" : "E")\(core.number)  \(Format.percent(core.usage))%  \(frequency)")
+            print("  \(core.tier.letter)\(core.number)  \(Format.percent(core.usage))%  \(frequency)")
         }
         switch cpu.temperature {
         case .value(let temperature):
@@ -101,7 +101,11 @@ func doctor() {
     let (snapshot, sampler) = takeSnapshot()
     func line(_ name: String, _ ok: Bool, _ detail: String) { print("\(ok ? "ok  " : "MISS") \(name): \(detail)") }
     if let cpu = snapshot.cpu.value {
-        line("per-core usage", true, "\(cpu.performance.count) performance + \(cpu.efficiency.count) efficiency cores")
+        // Counted by what the system calls them: "5 super + 10 performance cores" on an M5 Pro.
+        var tiers: [CoreTier] = []
+        for core in cpu.cores where !tiers.contains(core.tier) { tiers.append(core.tier) }
+        let groups = tiers.map { tier in "\(cpu.cores.count(where: { $0.tier == tier })) \(tier == .unknown ? "unclassified" : tier.rawValue)" }
+        line("per-core usage", true, groups.joined(separator: " + ") + " cores")
         let missing = cpu.cores.compactMap { $0.frequencyMHz.reason }
         line("per-core frequency", missing.isEmpty, missing.first ?? "read through IOReport without admin rights")
         line(
