@@ -17,13 +17,33 @@ public enum Reading<Value: Sendable & Codable & Equatable>: Sendable, Codable, E
     }
 }
 
+/// The group a core is drawn in: the chip's fastest cores, or everything below them.
+/// What the cores are called is `CoreTier`; an M5 Pro draws its "Performance" cores in
+/// the `efficiency` group, under its "Super" cores.
 public enum CoreKind: String, Sendable, Codable {
     case performance, efficiency
+}
+
+/// What the system calls a core. `unknown` when it does not say.
+public enum CoreTier: String, Sendable, Codable {
+    case superCore = "super"
+    case performance, efficiency, unknown
+
+    /// One letter for compact lists.
+    public var letter: String {
+        switch self {
+        case .superCore: "S"
+        case .performance: "P"
+        case .efficiency: "E"
+        case .unknown: "C"
+        }
+    }
 }
 
 public struct CoreSample: Sendable, Codable, Equatable, Identifiable {
     public var id: Int
     public var kind: CoreKind
+    public var tier: CoreTier
     /// Position within its group, starting at 1.
     public var number: Int
     /// 0...1 share of the last interval the core was busy.
@@ -31,9 +51,13 @@ public struct CoreSample: Sendable, Codable, Equatable, Identifiable {
     public var frequencyMHz: Reading<Double>
     public var maxFrequencyMHz: Double?
 
-    public init(id: Int, kind: CoreKind, number: Int, usage: Double, frequencyMHz: Reading<Double>, maxFrequencyMHz: Double?) {
+    /// `tier` nil names the core after its group.
+    public init(
+        id: Int, kind: CoreKind, tier: CoreTier? = nil, number: Int, usage: Double, frequencyMHz: Reading<Double>, maxFrequencyMHz: Double?
+    ) {
         self.id = id
         self.kind = kind
+        self.tier = tier ?? (kind == .performance ? .performance : .efficiency)
         self.number = number
         self.usage = usage
         self.frequencyMHz = frequencyMHz

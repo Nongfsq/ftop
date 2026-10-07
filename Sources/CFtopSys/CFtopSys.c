@@ -26,15 +26,23 @@ extern CFTypeRef IOHIDServiceClientCopyEvent(IOHIDServiceClientRef, int64_t, int
 extern double IOHIDEventGetFloatValue(CFTypeRef, int32_t);
 
 #define MAX_STATES 64
+#define MAX_TABLES 32
+
+// One DVFS table of the power manager: `voltage-states<index>-sram`.
+typedef struct {
+    int index;
+    int count;
+    double mhz[MAX_STATES];
+} freq_table;
 
 struct ftop_cpu_sampler {
     CFMutableDictionaryRef channels;
     CFMutableDictionaryRef subscribed;
     IOReportSubscriptionRef subscription;
     CFDictionaryRef previous;
-    double pfreq[MAX_STATES], efreq[MAX_STATES];
-    int pcount, ecount;
-    char description[4096];
+    freq_table tables[MAX_TABLES];
+    int table_count;
+    char description[16384];
 };
 
 static void copy_string(CFStringRef s, char *out, size_t size) {
@@ -77,8 +85,18 @@ ftop_cpu_sampler *ftop_cpu_sampler_create(void) {
         while ((entry = IOIteratorNext(iterator))) {
             io_name_t name = {0};
             if (IORegistryEntryGetName(entry, name) == KERN_SUCCESS && strcmp(name, "pmgr") == 0) {
-                s->ecount = read_frequencies(entry, CFSTR("voltage-states1-sram"), s->efreq);
-                s->pcount = read_frequencies(entry, CFSTR("voltage-states5-sram"), s->pfreq);
+                // Which table belongs to which cluster differs between chips, so every
+                // table is kept and each core picks the one that fits its states.
+                for (int index = 0; index < 64 && s->table_count < MAX_TABLES; index++) {
+                    char key[40];
+                    snprintf(key, sizeof(key), "voltage-states%d-sram", index);
+                    CFStringRef property = CFStringCreateWithCString(kCFAllocatorDefault, key, kCFStringEncodingUTF8);
+                    freq_table *table = &s->tables[s->table_count];
+                    table->index = index;
+                    table->count = read_frequencies(entry, property, table->mhz);
+                    CFRelease(property);
+                    if (table->count > 0) s->table_count++;
+                }
             }
             IOObjectRelease(entry);
         }
@@ -107,6 +125,29 @@ static int is_idle_state(const char *name) {
     return strcmp(name, "IDLE") == 0 || strcmp(name, "DOWN") == 0 || strcmp(name, "OFF") == 0;
 }
 
+static int same_frequencies(const freq_table *a, const freq_table *b) {
+    return a->count == b->count && memcmp(a->mhz, b->mhz, sizeof(double) * (size_t)a->count) == 0;
+}
+
+// The table for a core with `steps` active states. A table fits when it has exactly
+// that many steps. Several fitting tables are fine while they hold the same
+// frequencies; when they differ, only the table known for that core type on the
+// chips measured so far (5 for 'P', 1 for 'E') is trusted. Otherwise NULL.
+static const freq_table *table_for(const ftop_cpu_sampler *s, char kind, int steps) {
+    const freq_table *first = NULL, *known = NULL;
+    int agree = 1;
+    int known_index = kind == 'P' ? 5 : (kind == 'E' ? 1 : -1);
+    for (int i = 0; i < s->table_count; i++) {
+        const freq_table *table = &s->tables[i];
+        if (table->count != steps) continue;
+        if (table->index == known_index) known = table;
+        if (!first) first = table;
+        else if (!same_frequencies(first, table)) agree = 0;
+    }
+    if (first && agree) return first;
+    return known;
+}
+
 static int compare_cores(const void *a, const void *b) {
     return strcmp(((const ftop_core_freq *)a)->channel, ((const ftop_core_freq *)b)->channel);
 }
@@ -123,6 +164,11 @@ int ftop_cpu_sampler_update(ftop_cpu_sampler *s, ftop_core_freq *out, int capaci
     int count = 0;
     size_t used = 0;
     s->description[0] = 0;
+    for (int i = 0; i < s->table_count; i++) {
+        const freq_table *table = &s->tables[i];
+        if (used + 96 < sizeof(s->description))
+            used += (size_t)snprintf(s->description + used, sizeof(s->description) - used, "table voltage-states%d-sram %d steps %.0f-%.0f MHz\n", table->index, table->count, table->mhz[0], table->mhz[table->count - 1]);
+    }
     CFTypeRef raw = CFDictionaryGetValue(delta, CFSTR("IOReportChannels"));
     if (raw && CFGetTypeID(raw) == CFArrayGetTypeID()) {
         CFArrayRef list = (CFArrayRef)raw;
@@ -130,14 +176,17 @@ int ftop_cpu_sampler_update(ftop_cpu_sampler *s, ftop_core_freq *out, int capaci
             CFDictionaryRef item = (CFDictionaryRef)CFArrayGetValueAtIndex(list, i);
             ftop_core_freq core = {0};
             copy_string(IOReportChannelGetChannelName(item), core.channel, sizeof(core.channel));
-            int perf = strncmp(core.channel, "PCPU", 4) == 0;
-            int eff = strncmp(core.channel, "ECPU", 4) == 0;
-            if (!perf && !eff) continue;
-            const double *freqs = perf ? s->pfreq : s->efreq;
-            int freq_count = perf ? s->pcount : s->ecount;
+            // A core channel is its cluster type letter, "CPU", and digits: "PCPU000".
+            if (strlen(core.channel) < 5 || strncmp(core.channel + 1, "CPU", 3) != 0 || core.channel[4] < '0' || core.channel[4] > '9') {
+                if (used + 64 < sizeof(s->description))
+                    used += (size_t)snprintf(s->description + used, sizeof(s->description) - used, "%s skipped: not a core channel\n", core.channel);
+                continue;
+            }
+            core.kind = core.channel[0];
 
-            double total = 0, active = 0, weighted = 0;
-            int active_states = 0, table_ok = 1;
+            double total = 0, active = 0;
+            double residencies[MAX_STATES];
+            int active_states = 0, overflow = 0;
             int32_t states = IOReportStateGetCount(item);
             for (int32_t j = 0; j < states; j++) {
                 int64_t residency = IOReportStateGetResidency(item, j);
@@ -149,16 +198,20 @@ int ftop_cpu_sampler_update(ftop_cpu_sampler *s, ftop_core_freq *out, int capaci
                 total += (double)residency;
                 if (is_idle_state(state)) continue;
                 active += (double)residency;
-                if (active_states < freq_count) weighted += (double)residency * freqs[active_states];
-                else table_ok = 0;
+                if (active_states < MAX_STATES) residencies[active_states] = (double)residency;
+                else overflow = 1;
                 active_states++;
             }
-            if (active_states != freq_count) table_ok = 0;
-            core.performance = perf;
+            const freq_table *table = overflow ? NULL : table_for(s, core.kind, active_states);
+            double weighted = 0;
+            if (table)
+                for (int j = 0; j < active_states; j++) weighted += residencies[j] * table->mhz[j];
+            if (used + 64 < sizeof(s->description))
+                used += (size_t)snprintf(s->description + used, sizeof(s->description) - used, "%s table %d\n", core.channel, table ? table->index : -1);
             core.active = total > 0 ? active / total : -1;
-            core.max_mhz = freq_count > 0 ? freqs[freq_count - 1] : -1;
+            core.max_mhz = table ? table->mhz[table->count - 1] : -1;
             // An idle core has no active time to weight; report the lowest step instead of nothing.
-            core.mhz = !table_ok ? -1 : (active > 0 ? weighted / active : freqs[0]);
+            core.mhz = !table ? -1 : (active > 0 ? weighted / active : table->mhz[0]);
             out[count++] = core;
         }
     }
@@ -176,6 +229,7 @@ int ftop_cpu_sampler_describe(ftop_cpu_sampler *s, char *buffer, int capacity) {
 int ftop_cpu_cluster_types(char *out, int capacity) {
     io_registry_entry_t cpus = IORegistryEntryFromPath(kIOMainPortDefault, "IODeviceTree:/cpus");
     if (!cpus) return -1;
+    if (capacity > 0) memset(out, 0, (size_t)capacity);
     io_iterator_t iterator = 0;
     int highest = -1;
     if (IORegistryEntryGetChildIterator(cpus, kIODeviceTreePlane, &iterator) == KERN_SUCCESS) {
@@ -192,7 +246,8 @@ int ftop_cpu_cluster_types(char *out, int capacity) {
                     index = value;
                 }
                 char kind = (char)CFDataGetBytePtr((CFDataRef)type)[0];
-                if (index >= 0 && index < capacity && (kind == 'P' || kind == 'E')) {
+                // Any letter is passed on: 'P' and 'E' so far, 'M' since the M5 Pro.
+                if (index >= 0 && index < capacity && kind >= 'A' && kind <= 'Z') {
                     out[index] = kind;
                     if (index > highest) highest = (int)index;
                 }

@@ -8,10 +8,10 @@
 
 typedef struct {
     char channel[32];   // IOReport channel name, e.g. "PCPU000"
-    int performance;    // 1 = performance core, 0 = efficiency core
+    char kind;          // cluster type letter the channel name starts with: 'P', 'E', 'M', ...
     double active;      // 0...1 share of the interval spent out of idle, or -1
     double mhz;         // active-time weighted frequency, or -1 when unknown
-    double max_mhz;     // top of this cluster's frequency table, or -1
+    double max_mhz;     // top of the frequency table that fits this core, or -1
 } ftop_core_freq;
 
 typedef struct ftop_cpu_sampler ftop_cpu_sampler;
@@ -24,7 +24,8 @@ int ftop_cpu_sampler_update(ftop_cpu_sampler *sampler, ftop_core_freq *out, int 
 // Writes one line per residency state seen in the last delta. Diagnostics only.
 int ftop_cpu_sampler_describe(ftop_cpu_sampler *sampler, char *buffer, int capacity);
 
-// Writes 'P' or 'E' for each logical CPU id. Returns the count, or -1.
+// Writes the IODeviceTree cluster type letter of each logical CPU id ('P', 'E',
+// 'M', ...) and 0 where a CPU has none. Returns the highest id found plus one, or -1.
 int ftop_cpu_cluster_types(char *out, int capacity);
 
 typedef struct {

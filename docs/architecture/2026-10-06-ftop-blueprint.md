@@ -67,7 +67,11 @@ amendments describe the code.
 - Readings: CPU usage per core from `host_processor_info` (public). Frequency per
   core from IOReport group "CPU Stats", subgroup "CPU Core Performance States",
   residency weighted by the DVFS tables in IORegistry `pmgr` (`voltage-states*`).
-  Core grouping from `hw.perflevelN.*`. Temperature from IOHIDEventSystem thermal
+  Core grouping from the IODeviceTree `cluster-type` letter of each CPU, ordered
+  and named by `hw.perflevelN.*`; no list of known chips (amended 2026-10-06,
+  issue 1: an M5 Pro reports 'M' and 'P' and calls them Performance and Super).
+  Each core takes the `voltage-states*-sram` table with as many steps as its
+  IOReport channel has active states. Temperature from IOHIDEventSystem thermal
   services, always labeled with its level (SoC sensor aggregate). Memory from
   `host_statistics64`, `vm.swapusage`, `kern.memorystatus_vm_pressure_level`.
   Network from 64-bit interface counters, non-loopback, as deltas. Processes from
