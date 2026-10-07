@@ -202,6 +202,7 @@ extension Snapshot {
             "Xcode", "Google Chrome Helper (Renderer)", "WindowServer", "Figma", "iTerm2", "Safari",
             "kernel_task", "Slack", "mds_stores", "Music", "Finder", "Notes", "Mail", "Terminal", "Spotlight", "Dock",
             "Activity Monitor", "coreaudiod", "launchd", "Preview", "Calendar", "bluetoothd", "Photos", "TextEdit",
+            "ollama", "node", "Docker", "python3", "Messages", "cloudd", "Maps", "Reminders",
         ]
         let list = (0..<processes).map { index in
             ProcessSample(

@@ -56,7 +56,7 @@ def place(canvas, panel, x, y):
 
 
 def frame(size, index=0):
-    return Image.open(frames / f"{size}-{index:02d}.png").convert("RGBA")
+    return Image.open(frames / f"{size}-{index:03d}.png").convert("RGBA")
 
 
 # 1. The same panel at six sizes.
