@@ -1,6 +1,7 @@
 /// One logical CPU as the panel groups and names it.
 public struct CoreIdentity: Sendable, Equatable {
-    public var kind: CoreKind
+    /// The group it is drawn in, 0 for the fastest; see `CoreSample.group`.
+    public var group: Int
     public var tier: CoreTier
     /// The IODeviceTree cluster type letter as ASCII, 0 when the CPU has none.
     public var type: UInt8
@@ -14,10 +15,10 @@ public enum CoreTopology {
     /// missing), `levels` the kernel's performance levels, fastest first
     /// (`hw.perflevelN.name` and `.logicalcpu`).
     ///
-    /// The fastest type forms the performance group and every other core the group
-    /// below it. A type is matched to a level by its core count; when counts tie,
-    /// by the order P, M, E. Whatever cannot be told is `unknown`, never a guess, and
-    /// a machine that reports no types at all is still one group of cores.
+    /// Every type is a group of its own, fastest first, however many there are. A type
+    /// is matched to a level by its core count; when counts tie, by the order P, M, E.
+    /// Whatever cannot be told is `unknown`, never a guess. Cores without a type join
+    /// the slowest group, and a machine that reports no types at all is one group.
     public static func classify(types: [UInt8], levels: [(name: String, count: Int)]) -> [CoreIdentity] {
         var counts: [UInt8: Int] = [:]
         for type in types where type != 0 { counts[type, default: 0] += 1 }
@@ -48,11 +49,9 @@ public enum CoreTopology {
 
         return types.map { type in
             guard type != 0, let position = rank[type] else {
-                return CoreIdentity(kind: letters.isEmpty ? .performance : .efficiency, tier: .unknown, type: 0, rank: letters.count)
+                return CoreIdentity(group: max(min(1, letters.count), letters.count - 1), tier: .unknown, type: 0, rank: letters.count)
             }
-            return CoreIdentity(
-                kind: position == 0 ? .performance : .efficiency, tier: tier(type: type, level: level[type].map { levels[$0].name }),
-                type: type, rank: position)
+            return CoreIdentity(group: position, tier: tier(type: type, level: level[type].map { levels[$0].name }), type: type, rank: position)
         }
     }
 

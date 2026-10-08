@@ -4,34 +4,42 @@ import FtopCore
 /// The core counts a layout is sized for. Kept apart from the live reading so the
 /// layout stays the same while a reading is briefly unavailable.
 public struct MachineShape: Equatable, Sendable, Codable {
-    public var performance: Int
-    public var efficiency: Int
+    /// The number of cores of each kind, fastest first. Any number of kinds.
+    public var groups: [Int]
 
-    public init(performance: Int = 8, efficiency: Int = 4) {
-        self.performance = performance
-        self.efficiency = efficiency
+    public init(groups: [Int]) {
+        self.groups = groups
     }
 
-    var kinds: [CoreKind] {
-        Array(repeating: .performance, count: performance) + Array(repeating: .efficiency, count: efficiency)
+    public init(performance: Int = 8, efficiency: Int = 4) {
+        self.init(groups: [performance, efficiency].filter { $0 > 0 })
+    }
+
+    public init(_ cpu: CPUSample) {
+        self.init(groups: cpu.groups.map(\.count))
+    }
+
+    /// The group of each core, in the order the cores are drawn.
+    var layout: [Int] {
+        groups.enumerated().flatMap { Array(repeating: $0.offset, count: $0.element) }
     }
 }
 
 /// Slot positions shared by the scene (numbers, hover) and `CoreBarsView` (columns),
 /// so a number always sits under its column.
 enum CoreBarsGeometry {
-    /// Equal-width slots with `gap` between them and `groupGap` extra between the two kinds.
-    static func slots(kinds: [CoreKind], width: CGFloat, gap: CGFloat, groupGap: CGFloat) -> [(x: CGFloat, width: CGFloat)] {
-        guard !kinds.isEmpty else { return [] }
-        let count = CGFloat(kinds.count)
-        let split = splitWidth(kinds: kinds, gap: gap, groupGap: groupGap)
-        let slot = max(1, (width - gap * (count - 1) - split) / count)
+    /// Equal-width slots with `gap` between them and `groupGap` extra where the group changes.
+    static func slots(groups: [Int], width: CGFloat, gap: CGFloat, groupGap: CGFloat) -> [(x: CGFloat, width: CGFloat)] {
+        guard !groups.isEmpty else { return [] }
+        let count = CGFloat(groups.count)
+        let split = groupGap + gap
+        let slot = max(1, (width - gap * (count - 1) - splitWidth(groups: groups, gap: gap, groupGap: groupGap)) / count)
         var x: CGFloat = 0
         var result: [(CGFloat, CGFloat)] = []
-        for (index, kind) in kinds.enumerated() {
+        for (index, group) in groups.enumerated() {
             if index > 0 {
                 x += gap
-                if kind != kinds[index - 1] { x += split }
+                if group != groups[index - 1] { x += split }
             }
             result.append((x, slot))
             x += slot
@@ -39,13 +47,14 @@ enum CoreBarsGeometry {
         return result
     }
 
-    static func splitWidth(kinds: [CoreKind], gap: CGFloat, groupGap: CGFloat) -> CGFloat {
-        Set(kinds).count > 1 ? groupGap + gap : 0
+    /// The extra room all the gaps between groups take together.
+    static func splitWidth(groups: [Int], gap: CGFloat, groupGap: CGFloat) -> CGFloat {
+        CGFloat(zip(groups, groups.dropFirst()).count(where: { $0 != $1 })) * (groupGap + gap)
     }
 
-    static func minimumWidth(kinds: [CoreKind], column: CGFloat, gap: CGFloat, groupGap: CGFloat) -> CGFloat {
-        let count = CGFloat(kinds.count)
-        return count * column + max(0, count - 1) * gap + splitWidth(kinds: kinds, gap: gap, groupGap: groupGap)
+    static func minimumWidth(groups: [Int], column: CGFloat, gap: CGFloat, groupGap: CGFloat) -> CGFloat {
+        let count = CGFloat(groups.count)
+        return count * column + max(0, count - 1) * gap + splitWidth(groups: groups, gap: gap, groupGap: groupGap)
     }
 }
 
@@ -148,11 +157,9 @@ public struct SceneBuilder {
 
     /// Live cores when they match the shape the layout was sized for.
     private var cores: [CoreSample] {
-        if let cpu, cpu.performance.count == machine.performance, cpu.efficiency.count == machine.efficiency {
-            return cpu.performance + cpu.efficiency
-        }
-        return machine.kinds.enumerated().map { index, kind in
-            CoreSample(id: index, kind: kind, number: index + 1, usage: 0, frequencyMHz: .unavailable(cpuReason), maxFrequencyMHz: nil)
+        if let cpu, MachineShape(cpu) == machine { return cpu.groups.flatMap { $0 } }
+        return machine.layout.enumerated().map { index, group in
+            CoreSample(id: index, group: group, number: index + 1, usage: 0, frequencyMHz: .unavailable(cpuReason), maxFrequencyMHz: nil)
         }
     }
 
@@ -298,7 +305,7 @@ public struct SceneBuilder {
         let groupGap = mini ? style.miniCoreGroupGap : style.coreGroupGap
         let list = cores
         scene.bars = BarsItem(rect: rect, cores: list, showsFrequency: !mini, gap: gap, groupGap: groupGap)
-        let slots = CoreBarsGeometry.slots(kinds: list.map(\.kind), width: rect.width, gap: gap, groupGap: groupGap)
+        let slots = CoreBarsGeometry.slots(groups: list.map(\.group), width: rect.width, gap: gap, groupGap: groupGap)
         for (index, slot) in slots.enumerated() {
             let region = CGRect(x: rect.minX + slot.x - gap / 2, y: rect.minY, width: slot.width + gap, height: hoverHeight ?? rect.height)
             // The canvas writes a core's detail line when the pointer is on it; no need to compose all of them every sample.
@@ -308,7 +315,7 @@ public struct SceneBuilder {
     }
 
     private var miniBarsWidth: CGFloat {
-        CoreBarsGeometry.minimumWidth(kinds: machine.kinds, column: style.miniCoreWidth, gap: style.miniCoreGap, groupGap: style.miniCoreGroupGap)
+        CoreBarsGeometry.minimumWidth(groups: machine.layout, column: style.miniCoreWidth, gap: style.miniCoreGap, groupGap: style.miniCoreGroupGap)
     }
 
     private func unavailable(_ reason: String, width: CGFloat, height: CGFloat) -> Scene {
@@ -357,9 +364,9 @@ public struct SceneBuilder {
 
     private func cpuModule(width fixedWidth: CGFloat?, height fixedHeight: CGFloat?, numbers: Bool, minimumBars: CGFloat, compact: Bool) -> Scene {
         var scene = Scene()
-        let kinds = machine.kinds
+        let kinds = machine.layout
         let column = numbers ? style.coreNumberedWidth : style.coreSlimWidth
-        let barsMinimum = CoreBarsGeometry.minimumWidth(kinds: kinds, column: column, gap: style.coreGap, groupGap: style.coreGroupGap)
+        let barsMinimum = CoreBarsGeometry.minimumWidth(groups: kinds, column: column, gap: style.coreGap, groupGap: style.coreGroupGap)
         // The compact layout has no pairs, so the GPU joins the title row.
         let gpuInHeader = showsGPU && compact
         let tail = max(side, temperatureRoom)
@@ -376,7 +383,7 @@ public struct SceneBuilder {
 
         if numbers {
             let list = cores
-            let slots = CoreBarsGeometry.slots(kinds: kinds, width: total, gap: style.coreGap, groupGap: style.coreGroupGap)
+            let slots = CoreBarsGeometry.slots(groups: kinds, width: total, gap: style.coreGap, groupGap: style.coreGroupGap)
             for (index, slot) in slots.enumerated() {
                 let middle = slot.x + slot.width / 2
                 let usage = cpu == nil ? "—" : Format.percent(list[index].usage)
@@ -559,7 +566,7 @@ public struct SceneBuilder {
         }
 
         // Shares are of what is in use right now, so the arcs of a busy list add up to about a full turn.
-        let cpuInUse = max(cpu.map { $0.usage * Double(machine.kinds.count) * 100 } ?? 0, list.top.reduce(0) { $0 + $1.cpuPercent }, 1)
+        let cpuInUse = max(cpu.map { $0.usage * Double(machine.layout.count) * 100 } ?? 0, list.top.reduce(0) { $0 + $1.cpuPercent }, 1)
         let memoryInUse = Double(max(memory?.used ?? 0, list.byMemory.reduce(0) { $0 + $1.memoryBytes }, 1))
         func memoryParts(_ bytes: UInt64) -> (number: String, unit: String) {
             let text = Format.processMemory(bytes)
@@ -699,7 +706,7 @@ public struct SceneBuilder {
         let padY = style.points(11)
         let gap = style.innerGap
         let barsMinimum = CoreBarsGeometry.minimumWidth(
-            kinds: machine.kinds, column: style.coreSlimWidth, gap: style.coreGap, groupGap: style.coreGroupGap)
+            groups: machine.layout, column: style.coreSlimWidth, gap: style.coreGap, groupGap: style.coreGroupGap)
         // The title row and the row under the memory bar share their columns, so the
         // figures line up in threes (or twos): processor, GPU, temperature over download, upload, watts.
         let top = modules.contains(.cpu) ? (showsGPU ? 3 : 2) : 0

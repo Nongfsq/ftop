@@ -47,7 +47,7 @@ public final class PanelModel {
         }
         snapshot = new
         guard let cpu = new.cpu.value else { return false }
-        let shape = MachineShape(performance: cpu.performance.count, efficiency: cpu.efficiency.count)
+        let shape = MachineShape(cpu)
         guard shape != machine else { return false }
         machine = shape
         sizes = [:]

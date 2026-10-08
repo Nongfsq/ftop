@@ -32,7 +32,7 @@ The color says what it belongs to; there is almost no text to read.
 
 | | |
 | --- | --- |
-| **Cores** | One column per core, performance and efficiency cores as two groups. The fill is usage; the tick is that core's current frequency. |
+| **Cores** | One column per core, one group per kind of core the chip has, fastest first. The fill is usage; the tick is that core's current frequency. |
 | **Memory** | Used and total, compressed, swap, and the system's own pressure level. |
 | **Network** | Current download and upload speed. |
 | **GPU** | Usage and memory in use. Hover for frequency, power, and temperature. |

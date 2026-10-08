@@ -38,7 +38,7 @@ final class CPUProvider {
         }
 
         var cores: [CoreSample] = []
-        var groupCounters: [CoreKind: Int] = [:]
+        var groupCounters: [Int: Int] = [:]
         var typeCounters: [UInt8: Int] = [:]
         // Fastest cores first, each type in logical order.
         let order = ticks.indices.sorted { lhs, rhs in
@@ -47,8 +47,8 @@ final class CPUProvider {
         }
         for logical in order {
             let identity = identities[logical]
-            let number = groupCounters[identity.kind, default: 0] + 1
-            groupCounters[identity.kind] = number
+            let number = groupCounters[identity.group, default: 0] + 1
+            groupCounters[identity.group] = number
             // IOReport names a core by its type letter; the nth channel of a type is its nth core.
             let position = typeCounters[identity.type, default: 0]
             typeCounters[identity.type] = position + 1
@@ -70,7 +70,7 @@ final class CPUProvider {
             }
             cores.append(
                 CoreSample(
-                    id: logical, kind: identity.kind, tier: identity.tier, number: number,
+                    id: logical, group: identity.group, tier: identity.tier, number: number,
                     usage: Metrics.usage(previous: previousTicks[logical], current: ticks[logical]) ?? 0,
                     frequencyMHz: frequency, maxFrequencyMHz: top))
         }

@@ -11,6 +11,7 @@ import Testing
     static let machines: [MachineShape] = [
         MachineShape(performance: 4, efficiency: 4), MachineShape(performance: 8, efficiency: 4), MachineShape(performance: 10, efficiency: 4),
         MachineShape(performance: 12, efficiency: 4), MachineShape(performance: 8, efficiency: 0),
+        MachineShape(groups: [2, 4, 6]), MachineShape(groups: [2, 2, 4, 4]),
     ]
     static let moduleSets: [[ModuleID]] = [
         ModuleID.stacked + ModuleID.added, ModuleID.stacked, ModuleID.stacked + [.gpu], ModuleID.stacked + [.power], [.cpu, .memory, .network, .gpu, .power],
@@ -24,7 +25,7 @@ import Testing
         config.hidden = ModuleID.added.filter { !modules.contains($0) }
         config.language = language
         model.apply(config)
-        model.ingest(Snapshot.sample(performance: machine.performance, efficiency: machine.efficiency))
+        model.ingest(Snapshot.sample(groups: machine.groups))
         return model
     }
 
@@ -138,7 +139,7 @@ import Testing
             let scene = Self.scene(model, choice, snapshot: model.snapshot)
             let bars = try! #require(scene.bars)
             let slots = CoreBarsGeometry.slots(
-                kinds: bars.cores.map(\.kind), width: bars.rect.width, gap: bars.gap, groupGap: bars.groupGap)
+                groups: bars.cores.map(\.group), width: bars.rect.width, gap: bars.gap, groupGap: bars.groupGap)
             #expect(slots.count == bars.cores.count, "the columns are the cores and nothing else")
             let numbers = scene.texts.filter { $0.font == model.style(scale: 1.5).coreNumber }
             #expect(numbers.count == slots.count)
