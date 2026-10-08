@@ -130,8 +130,9 @@ amendments describe the code.
 - CI/CD and deploy: no CI (owner rule). `scripts/check.sh` is the single gate:
   format check, build with warnings as errors, tests. Deployment is a local
   install script that copies the bundle to `~/Applications` and links
-  `~/.local/bin/ftop`. Rejected: GitHub Actions (owner declined); Homebrew cask
-  (needs a public remote and signing). Revisit when: the project gets a remote.
+  `~/.local/bin/ftop`. Rejected: GitHub Actions (owner declined). Homebrew cask
+  was rejected while there was no public remote; since 2026-10-08 a cask is published
+  in the owner's tap (see the project profile).
 - Observability: `os.Logger` with subsystem `dev.ftop` and categories sensors,
   layout, config, lifecycle; `ftop doctor` prints which readings are available and
   why not; `scripts/perf.sh` measures ftop's own CPU, wakeups, and memory. No
