@@ -105,8 +105,10 @@ func probe(json: Bool) {
     switch snapshot.processes {
     case .value(let list):
         print("Processes (\(list.coversAllUsers ? "all users" : "your processes only; run `sudo ftop grant` to include system processes"))")
+        // A share of the whole machine, the unit of the CPU line above and of the panel.
+        let cores = snapshot.cpu.value?.cores.count ?? ProcessInfo.processInfo.activeProcessorCount
         for process in list.top.prefix(5) {
-            print("  \(process.name)  \(Int(process.cpuPercent.rounded()))%  \(Format.processMemory(process.memoryBytes))")
+            print("  \(process.name)  \(Format.processShare(percentOfOneCore: process.cpuPercent, cores: cores))%  \(Format.processMemory(process.memoryBytes))")
         }
     case .unavailable(let reason): print("Processes unavailable: \(reason)")
     }

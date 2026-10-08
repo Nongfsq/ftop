@@ -131,6 +131,43 @@ import Testing
         }
     }
 
+    /// The title row and the process list are in one unit: a process that keeps 5.4 of ten
+    /// cores busy on a machine that is 54% busy reads 54, not 540.
+    @Test func processFiguresAreInTheTitleRowsUnit() throws {
+        let machine = MachineShape(performance: 6, efficiency: 4)
+        let model = Self.model(machine, ModuleID.stacked)
+        var snapshot = Snapshot.sample(performance: 6, efficiency: 4)
+        var cpu = try #require(snapshot.cpu.value)
+        for index in cpu.cores.indices { cpu.cores[index].usage = 0.54 }
+        snapshot.cpu = .value(cpu)
+        let chrome = ProcessSample(
+            pid: 1, name: "Google Chrome", cpuPercent: 455, memoryBytes: 1 << 30, appPath: "/Applications/Google Chrome.app",
+            members: [ProcessMember(name: "Google Chrome Helper", cpuPercent: 300, memoryBytes: 1 << 29)])
+        let all = ProcessSample(pid: 2, name: "all", cpuPercent: 540, memoryBytes: 1 << 20)
+        let small = ProcessSample(pid: 3, name: "small", cpuPercent: 4, memoryBytes: 1 << 20)
+        snapshot.processes = .value(ProcessList(top: [all, chrome, small], byMemory: [chrome, all, small], coversAllUsers: true))
+
+        let title = Format.percent(cpu.usage)
+        #expect(title == "54")
+        var listed = 0
+        for candidate in LayoutLadder.candidates(maxProcesses: 12, showsProcesses: true) {
+            let scene = Self.scene(model, LayoutChoice(candidate: candidate, scale: 1), snapshot: snapshot)
+            guard let rows = scene.processes?.rows, rows.count == 3 else { continue }
+            listed += 1
+            #expect(scene.texts.contains { $0.string == title }, "\(candidate): the title row")
+            #expect(rows.map(\.card.cpu) == [title, "46", "0.4"], "\(candidate)")
+            #expect(rows.map(\.value) == rows.map(\.card.cpu), "\(candidate)")
+            #expect(rows[1].card.members.map(\.value) == ["30"], "\(candidate)")
+            // The arc stays the share of what is in use (here what the list sums to); it is not divided by the cores again.
+            #expect(abs(rows[0].card.cpuShare - 540.0 / 999) < 0.001, "\(candidate)")
+        }
+        #expect(listed > 0)
+        // The strip's busiest process, in the same unit.
+        let strip = Self.scene(model, LayoutChoice(candidate: LayoutCandidate(tier: .strip, strip: .rich), scale: 1), snapshot: snapshot)
+        #expect(strip.texts.contains { $0.string == title + "%" })
+        #expect(strip.hovers.contains { $0.text.contains("all · CPU \(title)%") })
+    }
+
     /// Each number under the core columns is centered under its own column.
     @Test func coreNumbersSitUnderTheirColumns() {
         let model = Self.model(MachineShape(performance: 10, efficiency: 4), ModuleID.stacked + ModuleID.added)

@@ -206,10 +206,10 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         Strings.language = .en
         let card = ProcessCard(
-            name: "Google Chrome", appPath: "/Applications/Google Chrome.app", cpu: "94", cpuShare: 0.42, memory: "1.0", memoryUnit: "G", memoryShare: 0.12,
+            name: "Google Chrome", appPath: "/Applications/Google Chrome.app", cpu: "46", cpuShare: 0.84, memory: "1.0", memoryUnit: "G", memoryShare: 0.12,
             members: [
-                .init(name: "Google Chrome Helper (Renderer)", value: "51", unit: "%"), .init(name: "Google Chrome Helper", value: "22", unit: "%"),
-                .init(name: "Google Chrome", value: "14", unit: "%"), .init(name: "Google Chrome Helper (GPU)", value: "7", unit: "%"),
+                .init(name: "Google Chrome Helper (Renderer)", value: "26", unit: "%"), .init(name: "Google Chrome Helper", value: "11", unit: "%"),
+                .init(name: "Google Chrome", value: "6.8", unit: "%"), .init(name: "Google Chrome Helper (GPU)", value: "2.1", unit: "%"),
             ])
         let content = ProcessCardPicture.view(card)
         let window = NSWindow(contentRect: content.frame, styleMask: [.borderless], backing: .buffered, defer: false)
