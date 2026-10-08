@@ -24,8 +24,9 @@ public final class SystemSampler: @unchecked Sendable {
         queue.sync { collect() }
     }
 
-    public func describeCPUStates() -> String {
-        queue.sync { cpu.describeStates() }
+    /// What decides the CPU's and the GPU's frequencies on this Mac, for `ftop doctor --states`.
+    public func describeStates() -> String {
+        queue.sync { cpu.describeStates() + gpu.describeStates() }
     }
 
     /// Starts or restarts periodic sampling. `handler` runs on the sampler's queue.

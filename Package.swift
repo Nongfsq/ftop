@@ -17,6 +17,7 @@ let package = Package(
         .executableTarget(name: "FtopApp", dependencies: ["FtopCore", "FtopSensors", "FtopUI"]),
         .executableTarget(name: "ftop", dependencies: ["FtopCore", "FtopSensors"]),
         .executableTarget(name: "ftop-helper"),
+        .testTarget(name: "CFtopSysTests", dependencies: ["CFtopSys"]),
         .testTarget(name: "FtopCoreTests", dependencies: ["FtopCore"]),
         .testTarget(name: "FtopUITests", dependencies: ["FtopCore", "FtopUI"]),
     ],

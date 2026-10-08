@@ -50,6 +50,7 @@ final class CPUProvider {
             let number = groupCounters[identity.group, default: 0] + 1
             groupCounters[identity.group] = number
             // IOReport names a core by its type letter; the nth channel of a type is its nth core.
+            // The number in the name is not used: on some chips it does not start at 0 for each type.
             let position = typeCounters[identity.type, default: 0]
             typeCounters[identity.type] = position + 1
             let frequency: Reading<Double>
@@ -61,8 +62,7 @@ final class CPUProvider {
                 frequency = .unavailable("IODeviceTree gives no cluster type for this core")
             } else if let list = frequencies.cores[identity.type], list.count == types.count(where: { $0 == identity.type }) {
                 top = list[position].max_mhz > 0 ? list[position].max_mhz : nil
-                frequency =
-                    list[position].mhz > 0 ? .value(list[position].mhz) : .unavailable("no frequency table fits the states IOReport reports for \(letter) cores")
+                frequency = list[position].mhz > 0 ? .value(list[position].mhz) : .unavailable(Self.missingTable(list[position], letter: letter))
             } else {
                 frequency = .unavailable(
                     "IOReport has \(frequencies.cores[identity.type]?.count ?? 0) \(letter)CPU channels for \(types.count(where: { $0 == identity.type })) \(letter) cores"
@@ -82,11 +82,20 @@ final class CPUProvider {
         return .value(CPUSample(cores: cores, temperature: temperature))
     }
 
-    /// The raw residency states of the last sample, for `ftop doctor`.
+    /// What decides the frequencies, with the raw states of the last sample, for `ftop doctor`.
     func describeStates() -> String {
-        var buffer = [CChar](repeating: 0, count: 16384)
+        var buffer = [CChar](repeating: 0, count: 65536)
         ftop_cpu_sampler_describe(sampler, &buffer, Int32(buffer.count))
         return buffer.withUnsafeBufferPointer { String(cString: $0.baseAddress!) }
+    }
+
+    /// Why a core whose channel was read has no frequency: what exactly is missing.
+    private static func missingTable(_ core: ftop_core_freq, letter: String) -> String {
+        if core.tables == 0 { return "no frequency table (voltage-states<N>-sram) was found in the registry, needed for \(letter) cores" }
+        if core.fitting == 0 {
+            return "none of the \(core.tables) frequency tables has the \(core.steps) steps IOReport reports for \(letter) cores"
+        }
+        return "\(core.fitting) frequency tables have the \(core.steps) steps of \(letter) cores and differ; which is theirs is not known"
     }
 
     /// Channels by cluster type letter, each list in channel order.
@@ -263,8 +272,12 @@ final class GPUProvider {
             top = raw.max_mhz > 0 ? raw.max_mhz : nil
             if raw.mhz > 0 {
                 frequency = .value(raw.mhz)
+            } else if raw.table_steps == 0 {
+                frequency = .unavailable("no GPU frequency table (perf-states) was found in the registry")
+            } else if raw.steps == 0 {
+                frequency = .unavailable("IOReport reports no active states for the GPU")
             } else if top == nil {
-                frequency = .unavailable("no frequency table fits the states IOReport reports for the GPU")
+                frequency = .unavailable("the GPU's frequency table has \(raw.table_steps) values, fewer than the \(raw.steps) states IOReport reports")
             } else {
                 frequency = .unavailable("the GPU was powered down for the whole interval")
             }
@@ -277,6 +290,13 @@ final class GPUProvider {
                 usage: stats.utilization, frequencyMHz: frequency, maxFrequencyMHz: top,
                 memoryBytes: stats.memory_bytes >= 0 ? .value(UInt64(stats.memory_bytes)) : .unavailable("the graphics driver reports no memory in use"),
                 temperature: temperature))
+    }
+
+    /// What decides the frequency, with the raw states of the last sample, for `ftop doctor`.
+    func describeStates() -> String {
+        var buffer = [CChar](repeating: 0, count: 32768)
+        ftop_gpu_sampler_describe(sampler, &buffer, Int32(buffer.count))
+        return buffer.withUnsafeBufferPointer { String(cString: $0.baseAddress!) }
     }
 
     /// Average GPU power since the previous call.

@@ -8,21 +8,35 @@
 // Every function reports failure instead of guessing; callers show "unavailable".
 
 typedef struct {
-    char channel[32];   // IOReport channel name, e.g. "PCPU000"
-    char kind;          // cluster type letter the channel name starts with: 'P', 'E', 'M', ...
+    char channel[32];   // IOReport channel name, e.g. "PCPU000" or "PACC0_PCPU0"
+    char kind;          // cluster type letter in the channel name: 'P', 'E', 'M', ...
+    int index;          // the number in the channel name; not a position, it need not start at 0
     double active;      // 0...1 share of the interval spent out of idle, or -1
     double mhz;         // active-time weighted frequency, or -1 when unknown
     double max_mhz;     // top of the frequency table that fits this core, or -1
+    int steps;          // active states the channel reports
+    int tables;         // frequency tables found on this Mac
+    int fitting;        // how many of them have `steps` steps
 } ftop_core_freq;
+
+// Whether an IOReport channel name is a core's: a cluster type letter, "CPU", and
+// digits, at the start of the name or after its last underscore. Writes the letter
+// and the number when it is; either pointer may be NULL.
+int ftop_core_channel_parse(const char *name, char *kind, int *index);
+// Orders core channels by cluster prefix, type letter, then number as a number.
+int ftop_core_channel_compare(const char *a, const char *b);
 
 typedef struct ftop_cpu_sampler ftop_cpu_sampler;
 
 ftop_cpu_sampler *ftop_cpu_sampler_create(void);
 void ftop_cpu_sampler_destroy(ftop_cpu_sampler *sampler);
-// Fills `out` with the delta since the previous call, sorted by channel name.
+// Fills `out` with the delta since the previous call, in `ftop_core_channel_compare` order.
 // Returns the number of cores written, or -1 when no sample is available.
 int ftop_cpu_sampler_update(ftop_cpu_sampler *sampler, ftop_core_freq *out, int capacity);
-// Writes one line per residency state seen in the last delta. Diagnostics only.
+// Writes what decides a core's frequency: the tables found, the registry properties
+// that could be tables, how the device tree numbers the CPUs, and every channel of
+// the last delta with its states. Diagnostics only. Returns the length written, or
+// -1; text that does not fit is cut at a line and says so.
 int ftop_cpu_sampler_describe(ftop_cpu_sampler *sampler, char *buffer, int capacity);
 
 // Writes the IODeviceTree cluster type letter of each logical CPU id ('P', 'E',
@@ -45,6 +59,8 @@ typedef struct {
     double active;      // 0...1 share of the interval the GPU was powered, or -1
     double mhz;         // active-time weighted frequency, or -1 when unknown or idle all interval
     double max_mhz;     // top of the GPU's frequency table, or -1
+    int steps;          // active states the channel reports
+    int table_steps;    // values in the GPU's frequency table, 0 when none was found
 } ftop_gpu_freq;
 
 typedef struct ftop_gpu_sampler ftop_gpu_sampler;
@@ -53,6 +69,8 @@ ftop_gpu_sampler *ftop_gpu_sampler_create(void);
 void ftop_gpu_sampler_destroy(ftop_gpu_sampler *sampler);
 // Fills `out` with the delta since the previous call. Returns 0, or -1 when no sample is available.
 int ftop_gpu_sampler_update(ftop_gpu_sampler *sampler, ftop_gpu_freq *out);
+// The same as `ftop_cpu_sampler_describe`, for the GPU.
+int ftop_gpu_sampler_describe(ftop_gpu_sampler *sampler, char *buffer, int capacity);
 // Joules the GPU used since the previous call, or -1.
 double ftop_gpu_sampler_energy(ftop_gpu_sampler *sampler);
 

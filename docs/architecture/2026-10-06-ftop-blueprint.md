@@ -71,7 +71,13 @@ amendments describe the code.
   and named by `hw.perflevelN.*`; no list of known chips (amended 2026-10-06,
   issue 1: an M5 Pro reports 'M' and 'P' and calls them Performance and Super).
   Each core takes the `voltage-states*-sram` table with as many steps as its
-  IOReport channel has active states. Temperature from IOHIDEventSystem thermal
+  IOReport channel has active states. A core's channel is named by its type
+  letter, "CPU", and a number, alone (`PCPU000`) or after a cluster prefix
+  (`PACC0_PCPU0`, an M6); the nth channel of a type is its nth core, and the number
+  is not used as a position (amended 2026-10-08, issue 8). Nodes are found by what
+  they hold, with the known name first: the tables on `pmgr`, else on the one
+  device tree node that has such tables; never a table chosen by guess.
+  `ftop doctor --states` prints everything these rules read. Temperature from IOHIDEventSystem thermal
   services, always labeled with its level (SoC sensor aggregate). Memory from
   `host_statistics64`, `vm.swapusage`, `kern.memorystatus_vm_pressure_level`.
   Network from 64-bit interface counters, non-loopback, as deltas. Processes from
@@ -430,7 +436,8 @@ Recorded 2026-10-06. Each item replaces the matching decision or amendment above
 - Sources, all read as a normal user: GPU usage and memory in use from the graphics
   driver's `PerformanceStatistics` (`IOAccelerator`); GPU frequency from IOReport
   group "GPU Stats", channel `GPUPH`, weighted by the steps the GPU's own node lists
-  (`sgx`, property `perf-states`); GPU power from IOReport "Energy Model", channel
+  (`sgx`, property `perf-states`; when no node of that name has it, the node the
+  graphics driver is attached to, amended 2026-10-08); GPU power from IOReport "Energy Model", channel
   "GPU Energy"; GPU temperature and whole-machine power from the controller (SMC):
   every key starting "Tg", and `PSTR` (machine) and `PDTR` (adapter).
 - The controller's call layout is not published. It is declared only in `CFtopSys`,
