@@ -52,7 +52,11 @@ func takeSnapshot() -> (Snapshot, SystemSampler) {
 
 func probe(json: Bool) {
     let (snapshot, _) = takeSnapshot()
+    // A process's CPU is a share of the whole machine, the unit of the CPU line and of the panel.
+    let cores = snapshot.cpu.value?.cores.count ?? ProcessInfo.processInfo.activeProcessorCount
     if json {
+        var snapshot = snapshot
+        if let list = snapshot.processes.value { snapshot.processes = .value(list.asShareOfMachine(cores: cores)) }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
@@ -106,7 +110,7 @@ func probe(json: Bool) {
     case .value(let list):
         print("Processes (\(list.coversAllUsers ? "all users" : "your processes only; run `sudo ftop grant` to include system processes"))")
         for process in list.top.prefix(5) {
-            print("  \(process.name)  \(Int(process.cpuPercent.rounded()))%  \(Format.processMemory(process.memoryBytes))")
+            print("  \(process.name)  \(Format.processShare(percentOfOneCore: process.cpuPercent, cores: cores))%  \(Format.processMemory(process.memoryBytes))")
         }
     case .unavailable(let reason): print("Processes unavailable: \(reason)")
     }
@@ -233,7 +237,7 @@ case "help", "-h", "--help":
         ftop toggle     show or hide the panel
         ftop quit       close the panel
         ftop size WxH   resize the panel, e.g. `ftop size 300x420`
-        ftop probe      print one reading of every sensor (--json for the raw snapshot)
+        ftop probe      print one reading of every sensor (--json for the same as JSON)
         ftop doctor     list which readings are available and why not (--states for raw CPU states)
         ftop config     print the path of the settings file
         ftop version    print the installed version

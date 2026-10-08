@@ -24,6 +24,38 @@ import Testing
         #expect(Metrics.rate(previous: 1_000, current: 3_000, seconds: 2) == 1_000)
     }
 
+    /// A process is shown as a share of the whole machine: the per-core figure over the number of cores.
+    @Test func processShareIsThePerCoreFigureOverTheCores() {
+        // The owner's report: 455% of one core on ten cores, beside a title row of 54%.
+        #expect(Format.processShare(percentOfOneCore: 455, cores: 10) == "46")
+        #expect(Format.processShare(percentOfOneCore: 540, cores: 10) == Format.percent(0.54))
+        for cores in [1, 4, 8, 10, 14] {
+            #expect(Format.processShare(percentOfOneCore: 25 * Double(cores), cores: cores) == "25")
+            // Every core busy is the whole machine, and no figure is above it.
+            #expect(Format.processShare(percentOfOneCore: 100 * Double(cores), cores: cores) == Format.percent(1))
+            #expect(Format.processShare(percentOfOneCore: 130 * Double(cores), cores: cores) == "100")
+        }
+        // One decimal below 10, so a small busy process does not read "0".
+        #expect(Format.processShare(percentOfOneCore: 4, cores: 10) == "0.4")
+        #expect(Format.processShare(percentOfOneCore: 98.7, cores: 10) == "9.9")
+        #expect(Format.processShare(percentOfOneCore: 99.6, cores: 10) == "10")
+        #expect(Format.processShare(percentOfOneCore: 0, cores: 10) == "0.0")
+        #expect(Format.processShare(percentOfOneCore: 50, cores: 0) == "50")
+    }
+
+    /// What `ftop probe --json` writes: the same unit as the panel, folded processes included.
+    @Test func processListAsShareOfMachine() {
+        let chrome = ProcessSample(
+            pid: 1, name: "Google Chrome", cpuPercent: 455, memoryBytes: 1 << 30, appPath: "/Applications/Google Chrome.app",
+            members: [ProcessMember(name: "Google Chrome Helper", cpuPercent: 300, memoryBytes: 1 << 29)])
+        let runaway = ProcessSample(pid: 2, name: "runaway", cpuPercent: 1300, memoryBytes: 1 << 20)
+        let list = ProcessList(top: [runaway, chrome], byMemory: [chrome], coversAllUsers: true).asShareOfMachine(cores: 10)
+        #expect(list.top.map(\.cpuPercent) == [100, 45.5])
+        #expect(list.byMemory.map(\.cpuPercent) == [45.5])
+        #expect(list.top[1].members.map(\.cpuPercent) == [30])
+        #expect(list.top[1].memoryBytes == 1 << 30 && list.coversAllUsers)
+    }
+
     @Test func cpuPercentCountsCores() {
         // 2.5 s of CPU time in one second is two and a half cores.
         #expect(Metrics.cpuPercent(previousNanoseconds: 0, currentNanoseconds: 2_500_000_000, seconds: 1) == 250)

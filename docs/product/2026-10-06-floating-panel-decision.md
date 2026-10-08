@@ -322,6 +322,33 @@ rows (name, processor, memory) in the layout rules above.
   icon, cache it, trim its transparent margin.
 
 
+### A process's processor figure is a share of the whole machine (2026-10-08, owner's choice)
+
+The owner saw the title row at `54 %` beside `Google Chrome 455 %` on a ten-core Mac.
+Nothing was miscalculated: the title row was a share of the machine and the list was
+percent of one core, with an app's helpers summed. The panel has no room to explain a
+unit, so one symbol means one thing.
+
+- A process's processor use is shown as a share of the whole machine, the unit of the
+  title row: the per-core figure over the number of logical cores. Chrome in that
+  picture reads about 46. No process figure is above 100, and the figures of a list
+  add up to at most the title row.
+- This differs from Activity Monitor on purpose; it counts one core as 100%.
+- Small figures: one decimal below 10, whole from 10 (`0.4`, `9.9`, `10`, `100`), so a
+  small busy process does not read `0`. The same rule in the rows, the card and its
+  folded processes, the strip's busiest process and its hover, and `ftop probe`.
+- `ftop probe --json` writes the same unit, unrounded (owner, the same day: "JSON 也换成
+  整机比例"): `cpuPercent` of a process and of its folded processes is 0 to 100 of the
+  whole machine (`ProcessList.asShareOfMachine`).
+- Only what is shown and printed changed. Readings stay in percent of one core where
+  they are measured and ranked; the ranking and "a list that rests" below are as
+  before, and the arc is still the share of what is in use.
+- The conversion is `Format.processShare` in `Sources/FtopCore/Format.swift`.
+- Widths: the widest processor figure is now `100`, so in a row the widest figure is
+  memory's `88.8`; the row keeps that room and the name gains the rest. Layout sizes
+  did not change.
+- Not chosen, do not offer again: keeping percent of one core in the list.
+
 ### A list that rests (2026-10-07, built, awaiting the owner's look)
 
 The owner's report: readings of busy processes cross every second, so the list re-sorted

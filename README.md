@@ -38,7 +38,7 @@ The color says what it belongs to; there is almost no text to read.
 | **GPU** | Usage and memory in use. Hover for frequency, power, and temperature. |
 | **Power** | What the whole machine draws, in watts. |
 | **Temperature** | One figure, labeled with the sensor level it really comes from. |
-| **Processes** | The busiest apps with their own icons, helper processes folded into the app they belong to. |
+| **Processes** | The busiest apps with their own icons, helper processes folded into the app they belong to. An app's CPU is a share of the whole machine, the same unit as the total above it, so it never passes 100% (Activity Monitor counts one core as 100%). |
 
 A reading the hardware does not give is shown as unavailable, never as zero.
 

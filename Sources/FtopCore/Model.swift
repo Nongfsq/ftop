@@ -191,6 +191,7 @@ public struct NetworkSample: Sendable, Codable, Equatable {
 /// One process folded into an app's entry.
 public struct ProcessMember: Sendable, Codable, Equatable {
     public var name: String
+    /// Percent of one core, like `ProcessSample.cpuPercent`.
     public var cpuPercent: Double
     public var memoryBytes: UInt64
 
@@ -210,7 +211,8 @@ public enum ProcessSort: String, Sendable, Codable, CaseIterable {
 public struct ProcessSample: Sendable, Codable, Equatable, Identifiable {
     public var pid: Int32
     public var name: String
-    /// Percent of one core; 250 means two and a half cores.
+    /// Percent of one core, as it is measured; 250 means two and a half cores. It is
+    /// shown as a share of the whole machine (`Format.processShare`), the title row's unit.
     public var cpuPercent: Double
     public var memoryBytes: UInt64
     /// The outermost app bundle the process runs from; nil outside any app.
@@ -277,6 +279,25 @@ public struct ProcessList: Sendable, Codable, Equatable {
         self.byMemory = byMemory
         self.coversAllUsers = coversAllUsers
         self.helperOutdated = helperOutdated
+    }
+
+    /// This list with every `cpuPercent` as a share of the whole machine (0...100), the
+    /// unit the panel shows, instead of percent of one core. For output, not for ranking.
+    public func asShareOfMachine(cores: Int) -> ProcessList {
+        let count = Double(max(cores, 1))
+        func share(_ percentOfOneCore: Double) -> Double { min(max(percentOfOneCore / count, 0), 100) }
+        func converted(_ samples: [ProcessSample]) -> [ProcessSample] {
+            samples.map { sample in
+                var copy = sample
+                copy.cpuPercent = share(sample.cpuPercent)
+                copy.members = sample.members.map { ProcessMember(name: $0.name, cpuPercent: share($0.cpuPercent), memoryBytes: $0.memoryBytes) }
+                return copy
+            }
+        }
+        var list = self
+        list.top = converted(top)
+        list.byMemory = converted(byMemory)
+        return list
     }
 }
 
@@ -368,7 +389,7 @@ extension Snapshot {
             let name = names[index % names.count]
             return ProcessSample(
                 pid: Int32(100 + index), name: name,
-                cpuPercent: max(1, 188.8 / Double(index + 1)), memoryBytes: UInt64(Double(8_800_000_000) / Double((index * 7) % 11 + 1)),
+                cpuPercent: max(1, 140 / Double(index + 1)), memoryBytes: UInt64(Double(8_800_000_000) / Double((index * 7) % 11 + 1)),
                 appPath: samplePaths[name])
         }
         let byMemory = ProcessSample.folded(list, by: .memory)

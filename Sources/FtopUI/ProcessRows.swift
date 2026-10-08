@@ -272,9 +272,10 @@ final class ProcessRowsView: NSView {
         let badge = CGRect(x: 0, y: (size.height - style.badge) / 2, width: style.badge, height: style.badge)
         let baseline = size.height / 2 + ceil(Typesetter.metrics(style.body).capHeight) / 2
         // The figure has the room of the widest one, so the name never moves and is drawn once.
+        // Memory sets it ("88.8" G): a share of the machine is at most "100".
         let unitGap = style.points(2)
         let room = ceil(
-            Typesetter.line("8888", style.bodyStrong).width + unitGap + max(Typesetter.line("%", style.caption).width, Typesetter.line("M", style.caption).width))
+            Typesetter.line("88.8", style.bodyStrong).width + unitGap + max(Typesetter.line("%", style.caption).width, Typesetter.line("M", style.caption).width))
         let stale = restyled || entry.width != size.width || entry.content.contents == nil
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -525,7 +526,7 @@ private final class CardFace: NSView {
         guard let card else { return .zero }
         let style = base
         let title = Typesetter.width(card.name, style.bodyStrong)
-        let figures = (style.badge + style.badgeGap) * 2 + Typesetter.width("888.8 %", style.bodyStrong) * 2 + 18
+        let figures = (style.badge + style.badgeGap) * 2 + Typesetter.width("100 %", style.bodyStrong) + Typesetter.width("888.8 GB", style.bodyStrong) + 18
         let members = card.members.map { Typesetter.width($0.name, style.caption) + 70 }.max() ?? 0
         let width = min(280, max(190, pad * 2 + max(icon + 10 + title, figures, members)))
         let height = pad * 2 + icon + 12 + style.badge + (card.members.isEmpty ? 0 : 12 + CGFloat(card.members.count) * rowPitch - 6)
@@ -574,9 +575,10 @@ private final class CardFace: NSView {
         // The same two badges as in the panel: processor, then memory.
         let middle = iconBox.maxY + 12 + style.badge / 2
         var x = pad
-        for (glyph, paint, value, unit, share) in [
-            (Glyph.cpu, Paint.performance, card.cpu, "%", card.cpuShare),
-            (.memory, PanelStyle.pressurePaint(.normal), card.memory, card.memoryUnit + "B", card.memoryShare),
+        // The processor's figure keeps the room of its widest value, so the memory badge does not move with it.
+        for (glyph, paint, value, unit, share, widest) in [
+            (Glyph.cpu, Paint.performance, card.cpu, "%", card.cpuShare, "100"),
+            (.memory, PanelStyle.pressurePaint(.normal), card.memory, card.memoryUnit + "B", card.memoryShare, ""),
         ] {
             let badge = CGRect(x: x, y: middle - style.badge / 2, width: style.badge, height: style.badge)
             context.setFillColor(style.color(.badge).cgColor)
@@ -597,7 +599,7 @@ private final class CardFace: NSView {
             let left = badge.maxX + style.badgeGap
             let width = text(value, style.bodyStrong, .ink, x: left, baseline: baseline)
             let unitWidth = text(unit, style.caption, .secondary, x: left + width + 3, baseline: baseline)
-            x = left + width + 3 + unitWidth + 18
+            x = left + max(width, Typesetter.width(widest, style.bodyStrong)) + 3 + unitWidth + 18
         }
 
         var baseline = middle + style.badge / 2 + 12 + cap(style.caption)

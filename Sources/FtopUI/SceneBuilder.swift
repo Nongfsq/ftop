@@ -163,6 +163,9 @@ public struct SceneBuilder {
         }
     }
 
+    private var coreCount: Int { max(machine.groups.reduce(0, +), 1) }
+    /// A process's processor use as it is shown: a share of the whole machine, like the title row.
+    private func processShare(_ percentOfOneCore: Double) -> String { Format.processShare(percentOfOneCore: percentOfOneCore, cores: coreCount) }
     private var cpuReason: String { snapshot?.cpu.reason ?? Strings.noReading }
     private var gpu: GPUSample? { snapshot?.gpu.value }
     private var power: PowerSample? { snapshot?.power.value }
@@ -566,7 +569,8 @@ public struct SceneBuilder {
         }
 
         // Shares are of what is in use right now, so the arcs of a busy list add up to about a full turn.
-        let cpuInUse = max(cpu.map { $0.usage * Double(machine.layout.count) * 100 } ?? 0, list.top.reduce(0) { $0 + $1.cpuPercent }, 1)
+        // Both sides are in percent of one core here; only the figure that is shown is a share of the machine.
+        let cpuInUse = max(cpu.map { $0.usage * Double(coreCount) * 100 } ?? 0, list.top.reduce(0) { $0 + $1.cpuPercent }, 1)
         let memoryInUse = Double(max(memory?.used ?? 0, list.byMemory.reduce(0) { $0 + $1.memoryBytes }, 1))
         func memoryParts(_ bytes: UInt64) -> (number: String, unit: String) {
             let text = Format.processMemory(bytes)
@@ -579,10 +583,10 @@ public struct SceneBuilder {
             // The other figure comes from the other ranking when the entry is in it: that list sums the app's processes for that measure.
             let cpuPercent = sort == .cpu ? entry.cpuPercent : (other[entry.id]?.cpuPercent ?? entry.cpuPercent)
             let bytes = sort == .memory ? entry.memoryBytes : (other[entry.id]?.memoryBytes ?? entry.memoryBytes)
-            let percent = String(Int(cpuPercent.rounded()))
+            let percent = processShare(cpuPercent)
             let held = memoryParts(bytes)
             let members = entry.members.prefix(4).map { member -> ProcessCard.Member in
-                if sort == .cpu { return .init(name: member.name, value: String(Int(member.cpuPercent.rounded())), unit: "%") }
+                if sort == .cpu { return .init(name: member.name, value: processShare(member.cpuPercent), unit: "%") }
                 let parts = memoryParts(member.memoryBytes)
                 return .init(name: member.name, value: parts.number, unit: parts.unit)
             }
@@ -798,11 +802,11 @@ public struct SceneBuilder {
         }
         if rich, modules.contains(.processes) {
             let nameRoom = style.points(104)
-            let percentWidth = width("888%", style.body)
+            let percentWidth = width("100%", style.body)
             let baseline = middle + cap(style.body) / 2
             if let top = snapshot?.processes.value?.top.first {
                 let name = text(Typesetter.truncated(top.name, style.body, to: nameRoom), style.body, .ink, x: x, baseline: baseline)
-                let percent = "\(Int(top.cpuPercent.rounded()))%"
+                let percent = processShare(top.cpuPercent) + "%"
                 let number = text(percent, style.body, .secondary, x: name.x + name.width + style.points(4), baseline: baseline)
                 scene.texts += [name, number]
                 scene.hovers.append(

@@ -17,6 +17,14 @@ public enum Format {
         String(Int((min(max(fraction, 0), 9.99) * 100).rounded()))
     }
 
+    /// A process's processor use as a share of the whole machine, the unit of the title
+    /// row: `percentOfOneCore` (250 is two and a half cores) over `cores`. One decimal
+    /// below 10, so a small busy process does not read "0"; whole from there, at most "100".
+    public static func processShare(percentOfOneCore: Double, cores: Int) -> String {
+        let value = min(max(percentOfOneCore / Double(max(cores, 1)), 0), 100)
+        return value < 9.95 ? decimal(value) : String(Int(value.rounded()))
+    }
+
     /// Bytes per second as KB/s below 1 MB/s, then MB/s, then GB/s (decimal units).
     public static func rate(_ bytesPerSecond: Double) -> Quantity {
         let value = max(0, bytesPerSecond)
