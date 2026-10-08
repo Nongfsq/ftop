@@ -88,15 +88,6 @@ With system processes granted (below), the helper that lists them adds about 0.5
 
 Requirements: an Apple Silicon Mac with macOS 15 or later.
 
-**With Homebrew.**
-
-```bash
-brew install --cask nongfsq/tap/ftop
-```
-
-This puts `Ftop.app` in `/Applications` and the `ftop` command on your `PATH`; nothing
-else to do.
-
 **From a release.** Download `Ftop-<version>-arm64.zip` from the
 [releases page](https://github.com/Nongfsq/ftop/releases/latest), unpack it, and move
 `Ftop.app` to `~/Applications`. Then link the command into a directory on your `PATH`:

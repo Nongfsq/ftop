@@ -81,14 +81,6 @@ ftop 用来替代你常年开在终端标签页里的监视工具，换成一个
 
 要求：Apple Silicon Mac，macOS 15 或更新。
 
-**用 Homebrew。**
-
-```bash
-brew install --cask nongfsq/tap/ftop
-```
-
-它会把 `Ftop.app` 放进 `/Applications`，并把 `ftop` 命令放到 `PATH` 上，不需要再做别的。
-
 **用发布包。** 在[发布页](https://github.com/Nongfsq/ftop/releases/latest)下载
 `Ftop-<版本>-arm64.zip`，解压后把 `Ftop.app` 移到 `~/Applications`。然后把命令链接到
 `PATH` 里的某个目录：
