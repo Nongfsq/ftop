@@ -100,7 +100,7 @@ import Testing
     }
 
     @Test func frequencyFractionNeedsBothValues() {
-        var core = CoreSample(id: 0, kind: .performance, number: 1, usage: 0.5, frequencyMHz: .value(2200), maxFrequencyMHz: 4400)
+        var core = CoreSample(id: 0, group: 0, number: 1, usage: 0.5, frequencyMHz: .value(2200), maxFrequencyMHz: 4400)
         #expect(core.frequencyFraction == 0.5)
         core.frequencyMHz = .unavailable("no table")
         #expect(core.frequencyFraction == nil)
@@ -113,21 +113,21 @@ import Testing
     @Test func performanceAndEfficiencyCores() {
         // M4 Pro: efficiency cores have the low logical ids.
         let cores = CoreTopology.classify(types: Self.types("EEEEPPPPPPPPPP"), levels: [("Performance", 10), ("Efficiency", 4)])
-        #expect(cores.prefix(4).allSatisfy { $0.kind == .efficiency && $0.tier == .efficiency && $0.rank == 1 })
-        #expect(cores.dropFirst(4).allSatisfy { $0.kind == .performance && $0.tier == .performance && $0.rank == 0 })
+        #expect(cores.prefix(4).allSatisfy { $0.group == 1 && $0.tier == .efficiency && $0.rank == 1 })
+        #expect(cores.dropFirst(4).allSatisfy { $0.group == 0 && $0.tier == .performance && $0.rank == 0 })
     }
 
     @Test func superAndPerformanceCoresOfAnM5Pro() {
         // Ten 'M' cores the kernel calls "Performance" under five 'P' cores it calls "Super".
         let cores = CoreTopology.classify(types: Self.types("MMMMMMMMMMPPPPP"), levels: [("Super", 5), ("Performance", 10)])
-        #expect(cores.prefix(10).allSatisfy { $0.kind == .efficiency && $0.tier == .performance })
-        #expect(cores.suffix(5).allSatisfy { $0.kind == .performance && $0.tier == .superCore })
+        #expect(cores.prefix(10).allSatisfy { $0.group == 1 && $0.tier == .performance })
+        #expect(cores.suffix(5).allSatisfy { $0.group == 0 && $0.tier == .superCore })
     }
 
     @Test func equalCountsFallBackToTheLetterOrder() {
         let cores = CoreTopology.classify(types: Self.types("EEEEPPPP"), levels: [("Super", 4), ("Efficiency", 4)])
         #expect(cores.first?.tier == .efficiency)
-        #expect(cores.last?.kind == .performance)
+        #expect(cores.last?.group == 0)
         #expect(cores.last?.tier == .superCore)
     }
 
@@ -136,12 +136,22 @@ import Testing
         let cores = CoreTopology.classify(types: Self.types("EEMMPP"), levels: [("Performance", 4), ("Efficiency", 2)])
         #expect(cores.map(\.rank) == [2, 2, 1, 1, 0, 0])
         #expect(cores.map(\.tier) == [.efficiency, .efficiency, .unknown, .unknown, .performance, .performance])
-        #expect(cores.map(\.kind) == [.efficiency, .efficiency, .efficiency, .efficiency, .performance, .performance])
+        #expect(cores.map(\.group) == [2, 2, 1, 1, 0, 0])
+    }
+
+    @Test func threeLevelsAreThreeGroups() {
+        // M6: 2 super, 4 performance, and 6 efficiency cores (issue 8). The letters are not known; the counts name them.
+        for letters in ["EEEEEEMMMMPP", "EEEEEEPPPPSS"] {
+            let cores = CoreTopology.classify(types: Self.types(letters), levels: [("Super", 2), ("Performance", 4), ("Efficiency", 6)])
+            #expect(cores.prefix(6).allSatisfy { $0.group == 2 && $0.tier == .efficiency })
+            #expect(cores.dropFirst(6).prefix(4).allSatisfy { $0.group == 1 && $0.tier == .performance })
+            #expect(cores.suffix(2).allSatisfy { $0.group == 0 && $0.tier == .superCore })
+        }
     }
 
     @Test func aLetterNeverSeenBeforeIsPlacedByItsCoreCount() {
         let cores = CoreTopology.classify(types: Self.types("XXXXXXPP"), levels: [("Performance", 6), ("Efficiency", 2)])
-        #expect(cores.first?.kind == .performance)
+        #expect(cores.first?.group == 0)
         #expect(cores.first?.tier == .performance)
         #expect(cores.last?.tier == .efficiency)
     }
@@ -149,11 +159,22 @@ import Testing
     @Test func coresWithoutATypeAreStillCores() {
         let none = CoreTopology.classify(types: Self.types("........"), levels: [("Performance", 8)])
         #expect(none.count == 8)
-        #expect(none.allSatisfy { $0.kind == .performance && $0.tier == .unknown })
+        #expect(none.allSatisfy { $0.group == 0 && $0.tier == .unknown })
 
         let some = CoreTopology.classify(types: Self.types("PP.."), levels: [])
-        #expect(some.map(\.kind) == [.performance, .performance, .efficiency, .efficiency])
+        #expect(some.map(\.group) == [0, 0, 1, 1])
         #expect(some.map(\.tier) == [.performance, .performance, .unknown, .unknown])
+
+        // With two types or more, a core without one joins the slowest group.
+        let mixed = CoreTopology.classify(types: Self.types("EEPP.."), levels: [])
+        #expect(mixed.map(\.group) == [1, 1, 0, 0, 1, 1])
+    }
+
+    @Test func anyNumberOfTypesIsThatManyGroups() {
+        let cores = CoreTopology.classify(types: Self.types("EEMMMPPPPXXXXX"), levels: [])
+        #expect(Set(cores.map(\.group)) == [0, 1, 2, 3])
+        #expect(cores.prefix(2).allSatisfy { $0.group == 2 })
+        #expect(cores.suffix(5).allSatisfy { $0.group == 3 })
     }
 }
 

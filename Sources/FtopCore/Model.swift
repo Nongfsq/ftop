@@ -17,13 +17,6 @@ public enum Reading<Value: Sendable & Codable & Equatable>: Sendable, Codable, E
     }
 }
 
-/// The group a core is drawn in: the chip's fastest cores, or everything below them.
-/// What the cores are called is `CoreTier`; an M5 Pro draws its "Performance" cores in
-/// the `efficiency` group, under its "Super" cores.
-public enum CoreKind: String, Sendable, Codable {
-    case performance, efficiency
-}
-
 /// What the system calls a core. `unknown` when it does not say.
 public enum CoreTier: String, Sendable, Codable {
     case superCore = "super"
@@ -42,7 +35,11 @@ public enum CoreTier: String, Sendable, Codable {
 
 public struct CoreSample: Sendable, Codable, Equatable, Identifiable {
     public var id: Int
-    public var kind: CoreKind
+    /// The group the core is drawn in: 0 for the chip's fastest kind of core, counting
+    /// up to its slowest. A chip has as many groups as it has kinds of core. What the
+    /// cores are called is `tier`; an M5 Pro's "Performance" cores are group 1, under
+    /// its "Super" cores.
+    public var group: Int
     public var tier: CoreTier
     /// Position within its group, starting at 1.
     public var number: Int
@@ -51,13 +48,12 @@ public struct CoreSample: Sendable, Codable, Equatable, Identifiable {
     public var frequencyMHz: Reading<Double>
     public var maxFrequencyMHz: Double?
 
-    /// `tier` nil names the core after its group.
     public init(
-        id: Int, kind: CoreKind, tier: CoreTier? = nil, number: Int, usage: Double, frequencyMHz: Reading<Double>, maxFrequencyMHz: Double?
+        id: Int, group: Int, tier: CoreTier = .unknown, number: Int, usage: Double, frequencyMHz: Reading<Double>, maxFrequencyMHz: Double?
     ) {
         self.id = id
-        self.kind = kind
-        self.tier = tier ?? (kind == .performance ? .performance : .efficiency)
+        self.group = group
+        self.tier = tier
         self.number = number
         self.usage = usage
         self.frequencyMHz = frequencyMHz
@@ -105,8 +101,10 @@ public struct CPUSample: Sendable, Codable, Equatable {
         cores.isEmpty ? 0 : cores.reduce(0) { $0 + $1.usage } / Double(cores.count)
     }
 
-    public var performance: [CoreSample] { cores.filter { $0.kind == .performance } }
-    public var efficiency: [CoreSample] { cores.filter { $0.kind == .efficiency } }
+    /// The cores of each group, fastest group first.
+    public var groups: [[CoreSample]] {
+        (0...(cores.map(\.group).max() ?? 0)).map { group in cores.filter { $0.group == group } }.filter { !$0.isEmpty }
+    }
 }
 
 /// The GPU as the system reports it: one figure for all of its cores.
@@ -335,22 +333,30 @@ extension Snapshot {
     ]
 
     public static func sample(performance: Int = 8, efficiency: Int = 4, processes: Int = 32) -> Snapshot {
+        sample(groups: [performance, efficiency].filter { $0 > 0 }, processes: processes)
+    }
+
+    /// `groups` is the number of cores of each kind, fastest first: `[2, 4, 6]` is an M6.
+    public static func sample(groups: [Int], processes: Int = 32) -> Snapshot {
         var cores: [CoreSample] = []
         let pUsage = [0.47, 0.28, 0.64, 0.57, 0.68, 0.59, 0.57, 0.38, 0.44, 0.61, 0.33, 0.52, 0.48, 0.66, 0.41, 0.58]
+        let mUsage = [0.36, 0.52, 0.29, 0.44, 0.58, 0.31, 0.47, 0.25]
         let eUsage = [0.16, 0.19, 0.39, 0.17, 0.22, 0.31, 0.14, 0.27]
-        for index in 0..<performance {
-            let usage = pUsage[index % pUsage.count]
-            cores.append(
-                CoreSample(
-                    id: index, kind: .performance, number: index + 1, usage: usage,
-                    frequencyMHz: .value(1000 + usage * 3000), maxFrequencyMHz: 4400))
-        }
-        for index in 0..<efficiency {
-            let usage = eUsage[index % eUsage.count]
-            cores.append(
-                CoreSample(
-                    id: performance + index, kind: .efficiency, number: index + 1, usage: usage,
-                    frequencyMHz: .value(900 + usage * 2000), maxFrequencyMHz: 2600))
+        // Named as the chips so far name them: the fastest of three or more kinds is "Super".
+        let tiers: [CoreTier] =
+            groups.count < 3 ? [.performance, .efficiency] : [.superCore, .performance] + Array(repeating: .unknown, count: groups.count - 3) + [.efficiency]
+        for (group, count) in groups.enumerated() {
+            let last = group == groups.count - 1 && group > 0
+            let list = group == 0 ? pUsage : (last ? eUsage : mUsage)
+            // Top frequency falls evenly from the fastest group to the slowest.
+            let top = 4400 - 1800 * Double(group) / Double(max(1, groups.count - 1))
+            for index in 0..<count {
+                let usage = list[index % list.count]
+                cores.append(
+                    CoreSample(
+                        id: cores.count, group: group, tier: tiers[group], number: index + 1, usage: usage,
+                        frequencyMHz: .value(group == 0 ? 1000 + usage * 3000 : 900 + usage * (top - 600)), maxFrequencyMHz: top))
+            }
         }
         let names = [
             "Xcode", "Google Chrome", "WindowServer", "Figma", "iTerm2", "Safari",

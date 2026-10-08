@@ -352,6 +352,40 @@ Each move was fine; all of them together looked hurried.
 
 The rule is `SteadyRanking` in `Sources/FtopCore/ProcessRanking.swift`.
 
+## Amendment: one group per kind of core (2026-10-08)
+
+A user's M6 has three kinds of core (super, performance, efficiency; issue 8) and the
+panel had two groups. The owner asked for any number ("可以写成 N 组 … 能自适应，这个很重要")
+and accepted the color rule. This extends "the two kinds differ by color and by the gap
+between the groups".
+
+- A chip has as many groups as it has kinds of core, fastest first, with the same gap
+  between each. Nothing names a chip or a count. Chips with two kinds are unchanged.
+- Colors run in even steps from the palette's performance color to its efficiency
+  color: three groups put the middle one halfway, four at thirds. No palette gained a
+  hand-picked color.
+- Seen by the owner only as reference images of three groups; four groups and the real
+  panel on such a chip have not been seen.
+
+## Full-screen spaces (2026-10-08, built, confirmed by the owner on the real panel)
+
+The owner's report: the panel, unpinned and covered by other windows, appeared on top of
+a full-screen video in Chrome. It had been allowed into every app's full-screen space
+whether pinned or not, and in that space nothing else covers it.
+
+- Unpinned, the panel is an ordinary window: other windows cover it, it does not enter
+  another app's full-screen space, and it lives on one desktop. A click on the menu bar
+  number brings it to the desktop in view.
+- Why one desktop: a first build kept it on every desktop and only withdrew the
+  full-screen permission; the owner still saw it over the video. A panel that follows
+  every desktop follows into full-screen ones too.
+- Pinned, it is on top everywhere, full-screen spaces included (owner: "置顶时出现"), so
+  it can be watched beside a full-screen game or render. One click on the pin removes it.
+- No new switch. The right-click block still opens over a full-screen app from the menu
+  bar number.
+- Not chosen: keeping the panel out of full screen even when pinned; in full screen the
+  menu bar is tucked away too, so nothing of ftop would be in view.
+
 ## The menu bar item: one reading, a glyph and its number (2026-10-08, approved and built)
 
 Approved by the owner on the boards "菜单栏显示哪一项" ("我可以选 A") and "菜单栏 · 图标与数字"
