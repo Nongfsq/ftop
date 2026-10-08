@@ -161,7 +161,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.delegate = self
         panel.isReleasedWhenClosed = false
         applyFloating()
@@ -205,8 +204,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         panel.contentMinSize = model.size(of: LayoutChoice(candidate: LayoutCandidate(tier: .micro), scale: LayoutLadder.minimumMicroScale))
     }
 
+    /// Unpinned, the panel is an ordinary window: other windows cover it and it lives on
+    /// one desktop, coming to the current one when asked for. Pinned, it is on top on
+    /// every desktop and in full-screen spaces. A panel that joins all spaces enters
+    /// full-screen ones even without `.fullScreenAuxiliary`, so unpinned must not join them.
     private func applyFloating() {
-        panel.level = model.config.floating ? .floating : .normal
+        let pinned = model.config.floating
+        panel.level = pinned ? .floating : .normal
+        panel.collectionBehavior = pinned ? [.canJoinAllSpaces, .fullScreenAuxiliary] : [.moveToActiveSpace]
     }
 
     /// The window corner closest to a screen corner; snapping keeps it in place.

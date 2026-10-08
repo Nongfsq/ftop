@@ -352,6 +352,25 @@ Each move was fine; all of them together looked hurried.
 
 The rule is `SteadyRanking` in `Sources/FtopCore/ProcessRanking.swift`.
 
+## Full-screen spaces (2026-10-08, built, confirmed by the owner on the real panel)
+
+The owner's report: the panel, unpinned and covered by other windows, appeared on top of
+a full-screen video in Chrome. It had been allowed into every app's full-screen space
+whether pinned or not, and in that space nothing else covers it.
+
+- Unpinned, the panel is an ordinary window: other windows cover it, it does not enter
+  another app's full-screen space, and it lives on one desktop. A click on the menu bar
+  number brings it to the desktop in view.
+- Why one desktop: a first build kept it on every desktop and only withdrew the
+  full-screen permission; the owner still saw it over the video. A panel that follows
+  every desktop follows into full-screen ones too.
+- Pinned, it is on top everywhere, full-screen spaces included (owner: "置顶时出现"), so
+  it can be watched beside a full-screen game or render. One click on the pin removes it.
+- No new switch. The right-click block still opens over a full-screen app from the menu
+  bar number.
+- Not chosen: keeping the panel out of full screen even when pinned; in full screen the
+  menu bar is tucked away too, so nothing of ftop would be in view.
+
 ## Rejected by the owner (do not reintroduce)
 
 - A processor figure larger than the figures beside it (2026-10-08): the core columns
