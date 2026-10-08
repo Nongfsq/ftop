@@ -280,6 +280,25 @@ public struct ProcessList: Sendable, Codable, Equatable {
         self.coversAllUsers = coversAllUsers
         self.helperOutdated = helperOutdated
     }
+
+    /// This list with every `cpuPercent` as a share of the whole machine (0...100), the
+    /// unit the panel shows, instead of percent of one core. For output, not for ranking.
+    public func asShareOfMachine(cores: Int) -> ProcessList {
+        let count = Double(max(cores, 1))
+        func share(_ percentOfOneCore: Double) -> Double { min(max(percentOfOneCore / count, 0), 100) }
+        func converted(_ samples: [ProcessSample]) -> [ProcessSample] {
+            samples.map { sample in
+                var copy = sample
+                copy.cpuPercent = share(sample.cpuPercent)
+                copy.members = sample.members.map { ProcessMember(name: $0.name, cpuPercent: share($0.cpuPercent), memoryBytes: $0.memoryBytes) }
+                return copy
+            }
+        }
+        var list = self
+        list.top = converted(top)
+        list.byMemory = converted(byMemory)
+        return list
+    }
 }
 
 public struct Snapshot: Sendable, Codable, Equatable {

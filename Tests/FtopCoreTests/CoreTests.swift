@@ -43,6 +43,19 @@ import Testing
         #expect(Format.processShare(percentOfOneCore: 50, cores: 0) == "50")
     }
 
+    /// What `ftop probe --json` writes: the same unit as the panel, folded processes included.
+    @Test func processListAsShareOfMachine() {
+        let chrome = ProcessSample(
+            pid: 1, name: "Google Chrome", cpuPercent: 455, memoryBytes: 1 << 30, appPath: "/Applications/Google Chrome.app",
+            members: [ProcessMember(name: "Google Chrome Helper", cpuPercent: 300, memoryBytes: 1 << 29)])
+        let runaway = ProcessSample(pid: 2, name: "runaway", cpuPercent: 1300, memoryBytes: 1 << 20)
+        let list = ProcessList(top: [runaway, chrome], byMemory: [chrome], coversAllUsers: true).asShareOfMachine(cores: 10)
+        #expect(list.top.map(\.cpuPercent) == [100, 45.5])
+        #expect(list.byMemory.map(\.cpuPercent) == [45.5])
+        #expect(list.top[1].members.map(\.cpuPercent) == [30])
+        #expect(list.top[1].memoryBytes == 1 << 30 && list.coversAllUsers)
+    }
+
     @Test func cpuPercentCountsCores() {
         // 2.5 s of CPU time in one second is two and a half cores.
         #expect(Metrics.cpuPercent(previousNanoseconds: 0, currentNanoseconds: 2_500_000_000, seconds: 1) == 250)

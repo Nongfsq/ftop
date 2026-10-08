@@ -337,9 +337,12 @@ unit, so one symbol means one thing.
 - Small figures: one decimal below 10, whole from 10 (`0.4`, `9.9`, `10`, `100`), so a
   small busy process does not read `0`. The same rule in the rows, the card and its
   folded processes, the strip's busiest process and its hover, and `ftop probe`.
-- Only the figure changed. Readings stay in percent of one core where they are
-  measured, ranked, and written by `ftop probe --json`; the ranking and "a list that
-  rests" below are as before, and the arc is still the share of what is in use.
+- `ftop probe --json` writes the same unit, unrounded (owner, the same day: "JSON 也换成
+  整机比例"): `cpuPercent` of a process and of its folded processes is 0 to 100 of the
+  whole machine (`ProcessList.asShareOfMachine`).
+- Only what is shown and printed changed. Readings stay in percent of one core where
+  they are measured and ranked; the ranking and "a list that rests" below are as
+  before, and the arc is still the share of what is in use.
 - The conversion is `Format.processShare` in `Sources/FtopCore/Format.swift`.
 - Widths: the widest processor figure is now `100`, so in a row the widest figure is
   memory's `88.8`; the row keeps that room and the name gains the rest. Layout sizes
