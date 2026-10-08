@@ -474,7 +474,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         center.addObserver(self, selector: #selector(environmentChanged), name: .NSProcessInfoPowerStateDidChange, object: nil)
         center.addObserver(self, selector: #selector(screensChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         let remote = DistributedNotificationCenter.default()
-        remote.addObserver(self, selector: #selector(showPanel), name: Notification.Name("dev.ftop.app.show"), object: nil)
+        remote.addObserver(self, selector: #selector(showRequested(_:)), name: Notification.Name("dev.ftop.app.show"), object: nil)
         remote.addObserver(self, selector: #selector(togglePanel), name: Notification.Name("dev.ftop.app.toggle"), object: nil)
         remote.addObserver(self, selector: #selector(quit), name: Notification.Name("dev.ftop.app.quit"), object: nil)
         remote.addObserver(self, selector: #selector(resize(_:)), name: Notification.Name("dev.ftop.app.size"), object: nil)
@@ -490,6 +490,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     // MARK: Commands
+
+    /// `ftop`, or another copy of the app that was started and handed over. The log says
+    /// which, so a hidden panel that came back can be traced to what asked for it.
+    @objc private func showRequested(_ notification: Notification) {
+        if let other = notification.object as? String {
+            log.info(
+                "show: asked by a second copy started from \(other, privacy: .public); this one runs from \(Bundle.main.bundlePath, privacy: .public), panel was \(self.panel.isVisible ? "shown" : "hidden", privacy: .public)"
+            )
+        } else {
+            log.info("show: asked by the ftop command, panel was \(self.panel.isVisible ? "shown" : "hidden", privacy: .public)")
+        }
+        showPanel()
+    }
+
+    /// Opening the running copy again (Finder, Spotlight) brings the panel back, the same
+    /// as opening another copy does.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        log.info("show: the app was opened again, panel was \(self.panel.isVisible ? "shown" : "hidden", privacy: .public)")
+        showPanel()
+        return false
+    }
 
     @objc private func showPanel() {
         pullOnScreen()
@@ -604,12 +625,13 @@ enum ConfigStore {
     }
 }
 
-// A second launch hands over to the running panel instead of opening another.
+// A second launch hands over to the running panel instead of opening another, and says
+// where it was started from: with several copies installed, any of them can be the one opened.
 if let identifier = Bundle.main.bundleIdentifier,
     NSRunningApplication.runningApplications(withBundleIdentifier: identifier).count > 1
 {
     DistributedNotificationCenter.default().postNotificationName(
-        Notification.Name("dev.ftop.app.show"), object: nil, userInfo: nil, deliverImmediately: true)
+        Notification.Name("dev.ftop.app.show"), object: Bundle.main.bundlePath, userInfo: nil, deliverImmediately: true)
     exit(0)
 }
 

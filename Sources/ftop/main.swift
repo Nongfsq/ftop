@@ -157,6 +157,12 @@ func doctor() {
         line("processes", false, snapshot.processes.reason ?? "")
     }
     line("panel", isRunning(), isRunning() ? "running" : "not running")
+    // Opening any copy shows the running panel, so a second copy explains a panel that came back.
+    let copies = NSWorkspace.shared.urlsForApplications(withBundleIdentifier: "dev.ftop.app").map { $0.resolvingSymlinksInPath().path }
+    if copies.count > 1 {
+        line("copies", false, "\(copies.count) copies of Ftop.app on this Mac; opening any of them shows the running panel. Keep one and delete the others:")
+        for copy in copies { print("       \(copy)") }
+    }
     print("config: \(Config.fileURL.path)")
     if arguments.contains("--states") { print(sampler.describeCPUStates()) }
 }
