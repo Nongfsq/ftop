@@ -170,7 +170,7 @@ func doctor() {
         for copy in copies { print("       \(copy)") }
     }
     print("config: \(Config.fileURL.path)")
-    if arguments.contains("--states") { print(sampler.describeCPUStates()) }
+    if arguments.contains("--states") { print(sampler.describeStates()) }
 }
 
 /// Installs the helper setuid root so the panel can read every user's processes.
@@ -238,7 +238,7 @@ case "help", "-h", "--help":
         ftop quit       close the panel
         ftop size WxH   resize the panel, e.g. `ftop size 300x420`
         ftop probe      print one reading of every sensor (--json for the same as JSON)
-        ftop doctor     list which readings are available and why not (--states for raw CPU states)
+        ftop doctor     list which readings are available and why not (--states adds the raw CPU and GPU frequency data)
         ftop config     print the path of the settings file
         ftop version    print the installed version
         ftop update     look for a newer version now and install it

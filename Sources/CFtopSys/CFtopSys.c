@@ -4,6 +4,7 @@
 #include <IOKit/IOKitLib.h>
 #include <IOKit/hidsystem/IOHIDEventSystemClient.h>
 #include <IOKit/hidsystem/IOHIDServiceClient.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,9 +43,10 @@ struct ftop_cpu_sampler {
     CFMutableDictionaryRef subscribed;
     IOReportSubscriptionRef subscription;
     CFDictionaryRef previous;
+    CFDictionaryRef last; // the delta of the last update, kept for the diagnostics
     freq_table tables[MAX_TABLES];
     int table_count;
-    char description[16384];
+    char table_node[32]; // the registry node the tables were read from
 };
 
 static void copy_string(CFStringRef s, char *out, size_t size) {
@@ -52,29 +54,140 @@ static void copy_string(CFStringRef s, char *out, size_t size) {
     if (s) CFStringGetCString(s, out, (CFIndex)size, kCFStringEncodingUTF8);
 }
 
+// Diagnostics text in a caller's buffer. A piece that does not fit is left out whole
+// and the text says so at its end, so what is there is never cut mid-line.
+typedef struct {
+    char *buffer;
+    size_t capacity, used;
+    int truncated;
+} text;
+
+#define TRUNCATED_NOTE "(output truncated)\n"
+
+static text text_begin(char *buffer, int capacity) {
+    text t = {buffer, 0, 0, 0};
+    if (capacity > (int)sizeof(TRUNCATED_NOTE)) t.capacity = (size_t)capacity - sizeof(TRUNCATED_NOTE);
+    if (capacity > 0) buffer[0] = 0;
+    return t;
+}
+
+__attribute__((format(printf, 2, 3))) static void append(text *t, const char *format, ...) {
+    if (t->truncated || t->capacity == 0) return;
+    va_list arguments;
+    va_start(arguments, format);
+    int written = vsnprintf(t->buffer + t->used, t->capacity - t->used, format, arguments);
+    va_end(arguments);
+    if (written < 0 || (size_t)written >= t->capacity - t->used) {
+        t->truncated = 1;
+        t->buffer[t->used] = 0;
+    } else {
+        t->used += (size_t)written;
+    }
+}
+
+static int text_end(text *t) {
+    if (t->truncated) {
+        // Back to the end of the last whole line, then the note; room for it was held back.
+        while (t->used > 0 && t->buffer[t->used - 1] != '\n') t->used--;
+        memcpy(t->buffer + t->used, TRUNCATED_NOTE, sizeof(TRUNCATED_NOTE));
+        t->used += sizeof(TRUNCATED_NOTE) - 1;
+    }
+    return (int)t->used;
+}
+
 // Reads a DVFS table (pairs of 32-bit frequency and voltage) and returns MHz values.
-static int read_frequencies(io_registry_entry_t entry, CFStringRef key, double *out) {
+static int frequencies_from(CFTypeRef property, double *out) {
     int count = 0;
+    if (!property || CFGetTypeID(property) != CFDataGetTypeID()) return 0;
+    const UInt8 *bytes = CFDataGetBytePtr((CFDataRef)property);
+    CFIndex length = CFDataGetLength((CFDataRef)property);
+    double top = 0;
+    for (CFIndex i = 0; i + 7 < length && count < MAX_STATES; i += 8) {
+        uint32_t raw = 0;
+        memcpy(&raw, bytes + i, sizeof(raw));
+        if (raw > 0) { out[count++] = raw; if (raw > top) top = raw; }
+    }
+    // Early Apple Silicon tables are in Hz, later ones in kHz.
+    double scale = top > 100000000.0 ? 1000000.0 : 1000.0;
+    for (int i = 0; i < count; i++) {
+        out[i] /= scale;
+        if (out[i] < 100 || out[i] > 10000) return 0;
+    }
+    return count;
+}
+
+static int read_frequencies(io_registry_entry_t entry, CFStringRef key, double *out) {
     CFTypeRef property = IORegistryEntryCreateCFProperty(entry, key, kCFAllocatorDefault, 0);
     if (!property) return 0;
-    if (CFGetTypeID(property) == CFDataGetTypeID()) {
-        const UInt8 *bytes = CFDataGetBytePtr((CFDataRef)property);
-        CFIndex length = CFDataGetLength((CFDataRef)property);
-        double top = 0;
-        for (CFIndex i = 0; i + 7 < length && count < MAX_STATES; i += 8) {
-            uint32_t raw = 0;
-            memcpy(&raw, bytes + i, sizeof(raw));
-            if (raw > 0) { out[count++] = raw; if (raw > top) top = raw; }
-        }
-        // Early Apple Silicon tables are in Hz, later ones in kHz.
-        double scale = top > 100000000.0 ? 1000000.0 : 1000.0;
-        for (int i = 0; i < count; i++) {
-            out[i] /= scale;
-            if (out[i] < 100 || out[i] > 10000) { count = 0; break; }
-        }
-    }
+    int count = frequencies_from(property, out);
     CFRelease(property);
     return count;
+}
+
+// Calls `visit` with the name and the properties of every node of the device tree.
+typedef void (*node_visitor)(const char *node, CFDictionaryRef properties, void *context);
+
+static void each_device_tree_node(node_visitor visit, void *context) {
+    io_iterator_t iterator = 0;
+    if (IORegistryCreateIterator(kIOMainPortDefault, kIODeviceTreePlane, kIORegistryIterateRecursively, &iterator) != KERN_SUCCESS) return;
+    io_object_t entry;
+    while ((entry = IOIteratorNext(iterator))) {
+        io_name_t name = {0};
+        CFMutableDictionaryRef properties = NULL;
+        if (IORegistryEntryGetName(entry, name) == KERN_SUCCESS && IORegistryEntryCreateCFProperties(entry, &properties, kCFAllocatorDefault, 0) == KERN_SUCCESS && properties) {
+            visit(name, properties, context);
+            CFRelease(properties);
+        }
+        IOObjectRelease(entry);
+    }
+    IOObjectRelease(iterator);
+}
+
+// The index in "voltage-states<index>-sram", or -1 for any other property name.
+static int sram_table_index(const char *key) {
+    int index = -1, end = 0;
+    if (sscanf(key, "voltage-states%d-sram%n", &index, &end) != 1 || end == 0 || key[end] != 0 || index < 0) return -1;
+    return index;
+}
+
+static int compare_tables(const void *a, const void *b) {
+    return ((const freq_table *)a)->index - ((const freq_table *)b)->index;
+}
+
+typedef struct {
+    freq_table tables[MAX_TABLES];
+    int count, nodes;
+    char node[32];
+} table_search;
+
+static void collect_tables(const void *key, const void *value, void *context) {
+    table_search *search = context;
+    char name[64];
+    if (CFGetTypeID(key) != CFStringGetTypeID() || search->nodes != 1 || search->count >= MAX_TABLES) return;
+    copy_string((CFStringRef)key, name, sizeof(name));
+    freq_table *table = &search->tables[search->count];
+    table->index = sram_table_index(name);
+    if (table->index < 0) return;
+    table->count = frequencies_from(value, table->mhz);
+    if (table->count > 0) search->count++;
+}
+
+static void has_table(const void *key, const void *value, void *context) {
+    char name[64];
+    double mhz[MAX_STATES];
+    if (CFGetTypeID(key) != CFStringGetTypeID()) return;
+    copy_string((CFStringRef)key, name, sizeof(name));
+    if (sram_table_index(name) >= 0 && frequencies_from(value, mhz) > 0) *(int *)context = 1;
+}
+
+static void search_tables(const char *node, CFDictionaryRef properties, void *context) {
+    table_search *search = context;
+    int found = 0;
+    CFDictionaryApplyFunction(properties, has_table, &found);
+    if (!found) return;
+    search->nodes++;
+    strlcpy(search->node, node, sizeof(search->node));
+    CFDictionaryApplyFunction(properties, collect_tables, search);
 }
 
 ftop_cpu_sampler *ftop_cpu_sampler_create(void) {
@@ -99,10 +212,26 @@ ftop_cpu_sampler *ftop_cpu_sampler_create(void) {
                     CFRelease(property);
                     if (table->count > 0) s->table_count++;
                 }
+                if (s->table_count > 0) strlcpy(s->table_node, name, sizeof(s->table_node));
             }
             IOObjectRelease(entry);
         }
         IOObjectRelease(iterator);
+    }
+    // A chip that keeps the same tables on a node of another name: taken only when
+    // exactly one node of the device tree has them, so there is nothing to choose.
+    if (s->table_count == 0) {
+        table_search *search = calloc(1, sizeof(*search));
+        if (search) {
+            each_device_tree_node(search_tables, search);
+            if (search->nodes == 1 && search->count > 0) {
+                qsort(search->tables, (size_t)search->count, sizeof(freq_table), compare_tables);
+                memcpy(s->tables, search->tables, sizeof(freq_table) * (size_t)search->count);
+                s->table_count = search->count;
+                strlcpy(s->table_node, search->node, sizeof(s->table_node));
+            }
+            free(search);
+        }
     }
 
     CFDictionaryRef copied = IOReportCopyChannelsInGroup(CFSTR("CPU Stats"), CFSTR("CPU Core Performance States"), 0, 0, 0);
@@ -117,6 +246,7 @@ ftop_cpu_sampler *ftop_cpu_sampler_create(void) {
 void ftop_cpu_sampler_destroy(ftop_cpu_sampler *s) {
     if (!s) return;
     if (s->previous) CFRelease(s->previous);
+    if (s->last) CFRelease(s->last);
     if (s->subscription) CFRelease((CFTypeRef)s->subscription);
     if (s->subscribed) CFRelease(s->subscribed);
     if (s->channels) CFRelease(s->channels);
@@ -135,13 +265,16 @@ static int same_frequencies(const freq_table *a, const freq_table *b) {
 // that many steps. Several fitting tables are fine while they hold the same
 // frequencies; when they differ, only the table known for that core type on the
 // chips measured so far (5 for 'P', 1 for 'E') is trusted. Otherwise NULL.
-static const freq_table *table_for(const ftop_cpu_sampler *s, char kind, int steps) {
+// `fitting` receives how many tables have that many steps.
+static const freq_table *table_for(const ftop_cpu_sampler *s, char kind, int steps, int *fitting) {
     const freq_table *first = NULL, *known = NULL;
     int agree = 1;
     int known_index = kind == 'P' ? 5 : (kind == 'E' ? 1 : -1);
+    *fitting = 0;
     for (int i = 0; i < s->table_count; i++) {
         const freq_table *table = &s->tables[i];
         if (table->count != steps) continue;
+        (*fitting)++;
         if (table->index == known_index) known = table;
         if (!first) first = table;
         else if (!same_frequencies(first, table)) agree = 0;
@@ -150,8 +283,76 @@ static const freq_table *table_for(const ftop_cpu_sampler *s, char kind, int ste
     return known;
 }
 
+// Where the core part of a channel name starts: after the last underscore, or at 0.
+static size_t core_part(const char *name) {
+    const char *underscore = strrchr(name, '_');
+    return underscore ? (size_t)(underscore - name) + 1 : 0;
+}
+
+int ftop_core_channel_parse(const char *name, char *kind, int *index) {
+    if (!name) return 0;
+    const char *core = name + core_part(name);
+    if (core[0] < 'A' || core[0] > 'Z' || strncmp(core + 1, "CPU", 3) != 0) return 0;
+    const char *digits = core + 4;
+    size_t length = strlen(digits);
+    if (length == 0 || length > 6) return 0;
+    int value = 0;
+    for (size_t i = 0; i < length; i++) {
+        if (digits[i] < '0' || digits[i] > '9') return 0;
+        value = value * 10 + (digits[i] - '0');
+    }
+    if (kind) *kind = core[0];
+    if (index) *index = value;
+    return 1;
+}
+
+int ftop_core_channel_compare(const char *a, const char *b) {
+    char kind_a = 0, kind_b = 0;
+    int index_a = 0, index_b = 0;
+    if (!ftop_core_channel_parse(a, &kind_a, &index_a) || !ftop_core_channel_parse(b, &kind_b, &index_b)) return strcmp(a, b);
+    size_t prefix_a = core_part(a), prefix_b = core_part(b);
+    int order = strncmp(a, b, prefix_a < prefix_b ? prefix_a : prefix_b);
+    if (order == 0) order = (prefix_a > prefix_b) - (prefix_a < prefix_b);
+    if (order == 0) order = (kind_a > kind_b) - (kind_a < kind_b);
+    if (order == 0) order = (index_a > index_b) - (index_a < index_b);
+    return order != 0 ? order : strcmp(a, b);
+}
+
 static int compare_cores(const void *a, const void *b) {
-    return strcmp(((const ftop_core_freq *)a)->channel, ((const ftop_core_freq *)b)->channel);
+    return ftop_core_channel_compare(((const ftop_core_freq *)a)->channel, ((const ftop_core_freq *)b)->channel);
+}
+
+// One core from its channel in a delta. Returns the table used, or NULL. With `out`,
+// every state and its residency is written too.
+static const freq_table *read_core(const ftop_cpu_sampler *s, CFDictionaryRef item, ftop_core_freq *core, text *out) {
+    double total = 0, active = 0;
+    double residencies[MAX_STATES];
+    int active_states = 0;
+    int32_t states = IOReportStateGetCount(item);
+    for (int32_t j = 0; j < states; j++) {
+        int64_t residency = IOReportStateGetResidency(item, j);
+        if (residency < 0) residency = 0;
+        char state[32];
+        copy_string(IOReportStateGetNameForIndex(item, j), state, sizeof(state));
+        if (out) append(out, "%s%s %lld", j == 0 ? "" : ", ", state, (long long)residency);
+        total += (double)residency;
+        if (is_idle_state(state)) continue;
+        active += (double)residency;
+        if (active_states < MAX_STATES) residencies[active_states] = (double)residency;
+        active_states++;
+    }
+    core->steps = active_states;
+    core->tables = s->table_count;
+    core->fitting = 0;
+    const freq_table *table = active_states > MAX_STATES ? NULL : table_for(s, core->kind, active_states, &core->fitting);
+    double weighted = 0;
+    if (table)
+        for (int j = 0; j < active_states; j++) weighted += residencies[j] * table->mhz[j];
+    core->active = total > 0 ? active / total : -1;
+    core->max_mhz = table ? table->mhz[table->count - 1] : -1;
+    // An idle core has no active time to weight; report the lowest step instead of nothing.
+    core->mhz = !table ? -1 : (active > 0 ? weighted / active : table->mhz[0]);
+    return table;
 }
 
 int ftop_cpu_sampler_update(ftop_cpu_sampler *s, ftop_core_freq *out, int capacity) {
@@ -161,16 +362,11 @@ int ftop_cpu_sampler_update(ftop_cpu_sampler *s, ftop_core_freq *out, int capaci
     CFDictionaryRef delta = s->previous ? IOReportCreateSamplesDelta(s->previous, current, NULL) : NULL;
     if (s->previous) CFRelease(s->previous);
     s->previous = current;
+    if (s->last) CFRelease(s->last);
+    s->last = delta;
     if (!delta) return -1;
 
     int count = 0;
-    size_t used = 0;
-    s->description[0] = 0;
-    for (int i = 0; i < s->table_count; i++) {
-        const freq_table *table = &s->tables[i];
-        if (used + 96 < sizeof(s->description))
-            used += (size_t)snprintf(s->description + used, sizeof(s->description) - used, "table voltage-states%d-sram %d steps %.0f-%.0f MHz\n", table->index, table->count, table->mhz[0], table->mhz[table->count - 1]);
-    }
     CFTypeRef raw = CFDictionaryGetValue(delta, CFSTR("IOReportChannels"));
     if (raw && CFGetTypeID(raw) == CFArrayGetTypeID()) {
         CFArrayRef list = (CFArrayRef)raw;
@@ -178,54 +374,226 @@ int ftop_cpu_sampler_update(ftop_cpu_sampler *s, ftop_core_freq *out, int capaci
             CFDictionaryRef item = (CFDictionaryRef)CFArrayGetValueAtIndex(list, i);
             ftop_core_freq core = {0};
             copy_string(IOReportChannelGetChannelName(item), core.channel, sizeof(core.channel));
-            // A core channel is its cluster type letter, "CPU", and digits: "PCPU000".
-            if (strlen(core.channel) < 5 || strncmp(core.channel + 1, "CPU", 3) != 0 || core.channel[4] < '0' || core.channel[4] > '9') {
-                if (used + 64 < sizeof(s->description))
-                    used += (size_t)snprintf(s->description + used, sizeof(s->description) - used, "%s skipped: not a core channel\n", core.channel);
-                continue;
-            }
-            core.kind = core.channel[0];
-
-            double total = 0, active = 0;
-            double residencies[MAX_STATES];
-            int active_states = 0, overflow = 0;
-            int32_t states = IOReportStateGetCount(item);
-            for (int32_t j = 0; j < states; j++) {
-                int64_t residency = IOReportStateGetResidency(item, j);
-                if (residency < 0) residency = 0;
-                char state[32];
-                copy_string(IOReportStateGetNameForIndex(item, j), state, sizeof(state));
-                if (used + 64 < sizeof(s->description))
-                    used += (size_t)snprintf(s->description + used, sizeof(s->description) - used, "%s %s %lld\n", core.channel, state, (long long)residency);
-                total += (double)residency;
-                if (is_idle_state(state)) continue;
-                active += (double)residency;
-                if (active_states < MAX_STATES) residencies[active_states] = (double)residency;
-                else overflow = 1;
-                active_states++;
-            }
-            const freq_table *table = overflow ? NULL : table_for(s, core.kind, active_states);
-            double weighted = 0;
-            if (table)
-                for (int j = 0; j < active_states; j++) weighted += residencies[j] * table->mhz[j];
-            if (used + 64 < sizeof(s->description))
-                used += (size_t)snprintf(s->description + used, sizeof(s->description) - used, "%s table %d\n", core.channel, table ? table->index : -1);
-            core.active = total > 0 ? active / total : -1;
-            core.max_mhz = table ? table->mhz[table->count - 1] : -1;
-            // An idle core has no active time to weight; report the lowest step instead of nothing.
-            core.mhz = !table ? -1 : (active > 0 ? weighted / active : table->mhz[0]);
+            // A core channel is its cluster type letter, "CPU", and digits, alone
+            // ("PCPU000") or after a cluster prefix ("PACC0_PCPU0").
+            if (!ftop_core_channel_parse(core.channel, &core.kind, &core.index)) continue;
+            read_core(s, item, &core, NULL);
             out[count++] = core;
         }
     }
-    CFRelease(delta);
     qsort(out, (size_t)count, sizeof(ftop_core_freq), compare_cores);
     return count;
 }
 
+// ---- Diagnostics ----
+
+#define MAX_LISTED 48
+
+typedef struct {
+    text *out;
+    const char *prefix;
+    int listed, more;
+} property_listing;
+
+// One property that could be a frequency table: its size, whether it reads as one, and how it starts.
+static void list_property(text *out, const char *name, CFTypeRef value) {
+    if (CFGetTypeID(value) != CFDataGetTypeID()) {
+        append(out, "  %s: not bytes\n", name);
+        return;
+    }
+    const UInt8 *bytes = CFDataGetBytePtr((CFDataRef)value);
+    CFIndex length = CFDataGetLength((CFDataRef)value);
+    double mhz[MAX_STATES];
+    int steps = frequencies_from(value, mhz);
+    append(out, "  %s: %ld bytes, ", name, (long)length);
+    if (steps > 0) append(out, "reads as %d steps %.0f-%.0f MHz,", steps, mhz[0], mhz[steps - 1]);
+    else append(out, "does not read as frequencies,");
+    // The first 32 bytes show the size of an entry and the unit.
+    for (CFIndex i = 0; i < length && i < 32; i++) append(out, "%s%02x", i % 4 == 0 ? " " : "", bytes[i]);
+    append(out, "%s\n", length > 32 ? " ..." : "");
+}
+
+typedef struct {
+    text *out;
+    const char *prefix;
+    int nodes, more;
+} node_listing;
+
+static void collect_prefixed(const void *key, const void *value, void *context) {
+    const char *prefix = ((void **)context)[0];
+    char name[64];
+    (void)value;
+    if (CFGetTypeID(key) != CFStringGetTypeID()) return;
+    copy_string((CFStringRef)key, name, sizeof(name));
+    if (strncmp(name, prefix, strlen(prefix)) == 0) CFArrayAppendValue((CFMutableArrayRef)((void **)context)[1], key);
+}
+
+static CFComparisonResult compare_names(const void *a, const void *b, void *context) {
+    (void)context;
+    return CFStringCompare((CFStringRef)a, (CFStringRef)b, kCFCompareNumerically);
+}
+
+static void list_node(const char *node, CFDictionaryRef properties, void *context) {
+    node_listing *nodes = context;
+    CFMutableArrayRef names = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+    void *collecting[2] = {(void *)nodes->prefix, names};
+    CFDictionaryApplyFunction(properties, collect_prefixed, collecting);
+    CFIndex count = CFArrayGetCount(names);
+    if (count > 0 && nodes->nodes >= 8) nodes->more++;
+    else if (count > 0) {
+        nodes->nodes++;
+        append(nodes->out, " node %s\n", node);
+        CFArraySortValues(names, CFRangeMake(0, count), compare_names, NULL);
+        for (CFIndex i = 0; i < count && i < MAX_LISTED; i++) {
+            CFStringRef key = (CFStringRef)CFArrayGetValueAtIndex(names, i);
+            char name[64];
+            copy_string(key, name, sizeof(name));
+            list_property(nodes->out, name, CFDictionaryGetValue(properties, key));
+        }
+        if (count > MAX_LISTED) append(nodes->out, "  and %ld more\n", (long)(count - MAX_LISTED));
+    }
+    CFRelease(names);
+}
+
+// Every property of the device tree whose name starts with `prefix`, by node.
+// Returns how many nodes have one.
+static int describe_properties(text *out, const char *prefix) {
+    node_listing nodes = {out, prefix, 0, 0};
+    append(out, "properties named %s* in the device tree:\n", prefix);
+    each_device_tree_node(list_node, &nodes);
+    if (nodes.nodes == 0) append(out, " none\n");
+    if (nodes.more > 0) append(out, " and %d more nodes\n", nodes.more);
+    return nodes.nodes;
+}
+
+static void list_name(const void *key, const void *value, void *context) {
+    property_listing *listing = context;
+    char name[64];
+    if (CFGetTypeID(key) != CFStringGetTypeID()) return;
+    if (listing->listed >= 160) { listing->more++; return; }
+    listing->listed++;
+    copy_string((CFStringRef)key, name, sizeof(name));
+    if (CFGetTypeID(value) == CFDataGetTypeID()) append(listing->out, " %s(%ld)", name, (long)CFDataGetLength((CFDataRef)value));
+    else append(listing->out, " %s", name);
+}
+
+// The names of all properties of a registry entry, with the byte count of each data property.
+static void describe_names(text *out, io_registry_entry_t entry) {
+    io_name_t name = {0};
+    CFMutableDictionaryRef properties = NULL;
+    IORegistryEntryGetName(entry, name);
+    if (IORegistryEntryCreateCFProperties(entry, &properties, kCFAllocatorDefault, 0) != KERN_SUCCESS || !properties) return;
+    property_listing listing = {out, "", 0, 0};
+    append(out, "all properties of %s (bytes):", name);
+    CFDictionaryApplyFunction(properties, list_name, &listing);
+    if (listing.more > 0) append(out, " and %d more", listing.more);
+    append(out, "\n");
+    CFRelease(properties);
+}
+
+static long integer_property(io_registry_entry_t entry, CFStringRef key) {
+    long result = -1;
+    CFTypeRef value = IORegistryEntryCreateCFProperty(entry, key, kCFAllocatorDefault, 0);
+    if (!value) return -1;
+    if (CFGetTypeID(value) == CFNumberGetTypeID()) CFNumberGetValue((CFNumberRef)value, kCFNumberLongType, &result);
+    else if (CFGetTypeID(value) == CFDataGetTypeID() && CFDataGetLength((CFDataRef)value) >= 4) {
+        uint32_t raw = 0;
+        memcpy(&raw, CFDataGetBytePtr((CFDataRef)value), 4);
+        result = raw;
+    }
+    CFRelease(value);
+    return result;
+}
+
+// How the device tree numbers each CPU, to tell which channel is which core.
+static void describe_cpus(text *out) {
+    io_registry_entry_t cpus = IORegistryEntryFromPath(kIOMainPortDefault, "IODeviceTree:/cpus");
+    append(out, "cpus in the device tree (-1 where a property is missing):\n");
+    if (!cpus) { append(out, " none\n"); return; }
+    io_iterator_t iterator = 0;
+    if (IORegistryEntryGetChildIterator(cpus, kIODeviceTreePlane, &iterator) == KERN_SUCCESS) {
+        io_object_t cpu;
+        int listed = 0;
+        while ((cpu = IOIteratorNext(iterator))) {
+            io_name_t name = {0};
+            char type[8] = "?";
+            IORegistryEntryGetName(cpu, name);
+            CFTypeRef raw = IORegistryEntryCreateCFProperty(cpu, CFSTR("cluster-type"), kCFAllocatorDefault, 0);
+            if (raw && CFGetTypeID(raw) == CFDataGetTypeID() && CFDataGetLength((CFDataRef)raw) > 0) {
+                char letter = (char)CFDataGetBytePtr((CFDataRef)raw)[0];
+                if (letter >= 'A' && letter <= 'Z') { type[0] = letter; type[1] = 0; }
+            }
+            if (raw) CFRelease(raw);
+            if (listed++ < 128)
+                append(out, " %s type %s, logical-cpu-id %ld, cpu-id %ld, cluster-id %ld, cluster-core-id %ld\n", name, type,
+                       integer_property(cpu, CFSTR("logical-cpu-id")), integer_property(cpu, CFSTR("cpu-id")), integer_property(cpu, CFSTR("cluster-id")),
+                       integer_property(cpu, CFSTR("cluster-core-id")));
+            IOObjectRelease(cpu);
+        }
+        IOObjectRelease(iterator);
+    }
+    IOObjectRelease(cpus);
+}
+
+static io_registry_entry_t arm_io_device(const char *wanted) {
+    io_iterator_t iterator = 0;
+    io_registry_entry_t found = 0;
+    if (IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("AppleARMIODevice"), &iterator) != KERN_SUCCESS) return 0;
+    io_object_t entry;
+    while ((entry = IOIteratorNext(iterator))) {
+        io_name_t name = {0};
+        if (!found && IORegistryEntryGetName(entry, name) == KERN_SUCCESS && strcmp(name, wanted) == 0) found = entry;
+        else IOObjectRelease(entry);
+    }
+    IOObjectRelease(iterator);
+    return found;
+}
+
 int ftop_cpu_sampler_describe(ftop_cpu_sampler *s, char *buffer, int capacity) {
-    if (!s || capacity <= 0) return -1;
-    strlcpy(buffer, s->description, (size_t)capacity);
-    return (int)strlen(buffer);
+    if (!s || !buffer || capacity <= 0) return -1;
+    text out = text_begin(buffer, capacity);
+
+    // What decides whether a frequency can be shown comes first; the long list of states last.
+    append(&out, "== CPU frequency\n");
+    append(&out, "frequency tables: looked for voltage-states<N>-sram on the power manager (pmgr), else on the one device tree node that has them\n");
+    if (s->table_count == 0) append(&out, " none found\n");
+    for (int i = 0; i < s->table_count; i++) {
+        const freq_table *table = &s->tables[i];
+        append(&out, " table %s voltage-states%d-sram %d steps %.0f-%.0f MHz\n", s->table_node, table->index, table->count, table->mhz[0], table->mhz[table->count - 1]);
+    }
+    int nodes = describe_properties(&out, "voltage-states");
+    if (s->table_count == 0 || nodes == 0) {
+        io_registry_entry_t pmgr = arm_io_device("pmgr");
+        if (pmgr) {
+            describe_names(&out, pmgr);
+            IOObjectRelease(pmgr);
+        } else {
+            append(&out, "no AppleARMIODevice node is named pmgr\n");
+        }
+    }
+    describe_cpus(&out);
+
+    append(&out, "channels of IOReport \"CPU Stats\" / \"CPU Core Performance States\" (state and residency):\n");
+    CFTypeRef raw = s->last ? CFDictionaryGetValue(s->last, CFSTR("IOReportChannels")) : NULL;
+    if (!s->subscription) append(&out, " IOReport gave no subscription to the group\n");
+    else if (!raw || CFGetTypeID(raw) != CFArrayGetTypeID()) append(&out, " no sample yet\n");
+    else {
+        CFArrayRef list = (CFArrayRef)raw;
+        if (CFArrayGetCount(list) == 0) append(&out, " the group has no channels\n");
+        for (CFIndex i = 0; i < CFArrayGetCount(list); i++) {
+            CFDictionaryRef item = (CFDictionaryRef)CFArrayGetValueAtIndex(list, i);
+            ftop_core_freq core = {0};
+            copy_string(IOReportChannelGetChannelName(item), core.channel, sizeof(core.channel));
+            int is_core = ftop_core_channel_parse(core.channel, &core.kind, &core.index);
+            if (is_core) append(&out, " %s kind %c index %d: ", core.channel, core.kind, core.index);
+            else append(&out, " %s not a core channel: ", core.channel);
+            const freq_table *table = read_core(s, item, &core, &out);
+            if (!is_core) append(&out, "\n");
+            else if (table) append(&out, "; %d active states, table voltage-states%d-sram\n", core.steps, table->index);
+            else append(&out, "; %d active states, no table (%d of %d tables have that many steps)\n", core.steps, core.fitting, core.tables);
+        }
+    }
+    return text_end(&out);
 }
 
 int ftop_cpu_cluster_types(char *out, int capacity) {
@@ -342,9 +710,21 @@ struct ftop_gpu_sampler {
     CFMutableDictionaryRef energy_subscribed;
     IOReportSubscriptionRef energy_subscription;
     CFDictionaryRef energy_previous;
+    CFDictionaryRef last; // the delta of the last update, kept for the diagnostics
     double mhz[MAX_STATES];
     int mhz_count;
+    char node[32]; // the registry node the frequency steps were read from
 };
+
+// The registry entry the graphics driver is attached to, or 0.
+static io_registry_entry_t gpu_driver_node(void) {
+    io_service_t driver = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOAccelerator"));
+    if (!driver) return 0;
+    io_registry_entry_t parent = 0;
+    if (IORegistryEntryGetParentEntry(driver, kIOServicePlane, &parent) != KERN_SUCCESS) parent = 0;
+    IOObjectRelease(driver);
+    return parent;
+}
 
 ftop_gpu_sampler *ftop_gpu_sampler_create(void) {
     ftop_gpu_sampler *s = calloc(1, sizeof(*s));
@@ -356,11 +736,23 @@ ftop_gpu_sampler *ftop_gpu_sampler_create(void) {
         io_object_t entry;
         while ((entry = IOIteratorNext(iterator))) {
             io_name_t name = {0};
-            if (s->mhz_count == 0 && IORegistryEntryGetName(entry, name) == KERN_SUCCESS && strcmp(name, "sgx") == 0)
+            if (s->mhz_count == 0 && IORegistryEntryGetName(entry, name) == KERN_SUCCESS && strcmp(name, "sgx") == 0) {
                 s->mhz_count = read_frequencies(entry, CFSTR("perf-states"), s->mhz);
+                if (s->mhz_count > 0) strlcpy(s->node, name, sizeof(s->node));
+            }
             IOObjectRelease(entry);
         }
         IOObjectRelease(iterator);
+    }
+    // A chip whose GPU node has another name: the node the graphics driver is attached to is the GPU's.
+    if (s->mhz_count == 0) {
+        io_registry_entry_t node = gpu_driver_node();
+        if (node) {
+            io_name_t name = {0};
+            s->mhz_count = read_frequencies(node, CFSTR("perf-states"), s->mhz);
+            if (s->mhz_count > 0 && IORegistryEntryGetName(node, name) == KERN_SUCCESS) strlcpy(s->node, name, sizeof(s->node));
+            IOObjectRelease(node);
+        }
     }
 
     CFDictionaryRef copied = IOReportCopyChannelsInGroup(CFSTR("GPU Stats"), CFSTR("GPU Performance States"), 0, 0, 0);
@@ -398,6 +790,7 @@ ftop_gpu_sampler *ftop_gpu_sampler_create(void) {
 void ftop_gpu_sampler_destroy(ftop_gpu_sampler *s) {
     if (!s) return;
     if (s->previous) CFRelease(s->previous);
+    if (s->last) CFRelease(s->last);
     if (s->subscription) CFRelease((CFTypeRef)s->subscription);
     if (s->subscribed) CFRelease(s->subscribed);
     if (s->channels) CFRelease(s->channels);
@@ -415,6 +808,8 @@ int ftop_gpu_sampler_update(ftop_gpu_sampler *s, ftop_gpu_freq *out) {
     CFDictionaryRef delta = s->previous ? IOReportCreateSamplesDelta(s->previous, current, NULL) : NULL;
     if (s->previous) CFRelease(s->previous);
     s->previous = current;
+    if (s->last) CFRelease(s->last);
+    s->last = delta;
     if (!delta) return -1;
 
     int found = -1;
@@ -449,11 +844,67 @@ int ftop_gpu_sampler_update(ftop_gpu_sampler *s, ftop_gpu_freq *out) {
                 for (int j = 0; j < active_states; j++)
                     if (s->mhz[j] > out->max_mhz) out->max_mhz = s->mhz[j];
             out->mhz = fits && active > 0 ? weighted / active : -1;
+            out->steps = active_states;
+            out->table_steps = s->mhz_count;
             found = 0;
         }
     }
-    CFRelease(delta);
     return found;
+}
+
+int ftop_gpu_sampler_describe(ftop_gpu_sampler *s, char *buffer, int capacity) {
+    if (!s || !buffer || capacity <= 0) return -1;
+    text out = text_begin(buffer, capacity);
+    append(&out, "== GPU frequency\n");
+    append(&out, "frequency table: looked for perf-states on the GPU's node (sgx), else on the node the graphics driver is attached to\n");
+    if (s->mhz_count > 0) {
+        double low = s->mhz[0], high = s->mhz[0];
+        for (int i = 1; i < s->mhz_count; i++) {
+            if (s->mhz[i] < low) low = s->mhz[i];
+            if (s->mhz[i] > high) high = s->mhz[i];
+        }
+        append(&out, " table %s perf-states %d values %.0f-%.0f MHz\n", s->node, s->mhz_count, low, high);
+    } else {
+        append(&out, " none found\n");
+    }
+    int nodes = describe_properties(&out, "perf-state");
+    io_registry_entry_t node = gpu_driver_node();
+    if (node) {
+        io_name_t name = {0};
+        IORegistryEntryGetName(node, name);
+        append(&out, "the graphics driver is attached to node %s\n", name);
+        if (s->mhz_count == 0 || nodes == 0) describe_names(&out, node);
+        IOObjectRelease(node);
+    } else {
+        append(&out, "no graphics driver (IOAccelerator) with a parent node\n");
+    }
+
+    append(&out, "channels of IOReport \"GPU Stats\" / \"GPU Performance States\" (state and residency; ftop reads GPUPH):\n");
+    CFTypeRef raw = s->last ? CFDictionaryGetValue(s->last, CFSTR("IOReportChannels")) : NULL;
+    if (!s->subscription) append(&out, " IOReport gave no subscription to the group\n");
+    else if (!raw || CFGetTypeID(raw) != CFArrayGetTypeID()) append(&out, " no sample yet\n");
+    else {
+        CFArrayRef list = (CFArrayRef)raw;
+        if (CFArrayGetCount(list) == 0) append(&out, " the group has no channels\n");
+        for (CFIndex i = 0; i < CFArrayGetCount(list) && i < MAX_LISTED; i++) {
+            CFDictionaryRef item = (CFDictionaryRef)CFArrayGetValueAtIndex(list, i);
+            char channel[64];
+            copy_string(IOReportChannelGetChannelName(item), channel, sizeof(channel));
+            append(&out, " %s: ", channel);
+            int active_states = 0;
+            int32_t states = IOReportStateGetCount(item);
+            for (int32_t j = 0; j < states && j < 2 * MAX_STATES; j++) {
+                int64_t residency = IOReportStateGetResidency(item, j);
+                char state[32];
+                copy_string(IOReportStateGetNameForIndex(item, j), state, sizeof(state));
+                append(&out, "%s%s %lld", j == 0 ? "" : ", ", state, (long long)residency);
+                if (!is_idle_state(state)) active_states++;
+            }
+            append(&out, "; %d active states\n", active_states);
+        }
+        if (CFArrayGetCount(list) > MAX_LISTED) append(&out, " and %ld more channels\n", (long)(CFArrayGetCount(list) - MAX_LISTED));
+    }
+    return text_end(&out);
 }
 
 double ftop_gpu_sampler_energy(ftop_gpu_sampler *s) {
