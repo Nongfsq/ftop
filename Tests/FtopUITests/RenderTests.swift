@@ -24,6 +24,8 @@ private let demoSizeList: [(Double, Double)]? = ProcessInfo.processInfo.environm
     }
 }
 private let demoScale = ProcessInfo.processInfo.environment["FTOP_DEMO_SCALE"].flatMap { Double($0) } ?? 2
+/// `FTOP_DEMO_PALETTE=warm` draws the demo frames in another palette, into files with that name in front.
+private let demoPalette = ProcessInfo.processInfo.environment["FTOP_DEMO_PALETTE"].flatMap { PaletteID(rawValue: $0) }
 private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAMES"].flatMap { Int($0) } ?? 1
 
 @MainActor
@@ -103,6 +105,25 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
                 try bitmap.representation(using: .png, properties: [:])!
                     .write(to: directory.appending(path: "control-\(language.rawValue)-\(expanded ? "open" : "closed").png"))
             }
+            // The closed block with the panel pinned, in each palette, for anything that shows a switch or the colors changing.
+            for palette in PaletteID.allCases where language == .en {
+                var pinned = state
+                pinned.config.floating = true
+                pinned.config.palette = palette
+                let content = ControlPanel.picture(pinned, expanded: false)
+                let window = NSWindow(contentRect: content.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+                window.appearance = NSAppearance(named: .darkAqua)
+                window.isOpaque = false
+                window.backgroundColor = .clear
+                let backdrop = NSView(frame: content.frame)
+                backdrop.wantsLayer = true
+                backdrop.addSubview(content)
+                window.contentView = backdrop
+                window.layoutIfNeeded()
+                let bitmap = try #require(backdrop.bitmapImageRepForCachingDisplay(in: backdrop.bounds))
+                backdrop.cacheDisplay(in: backdrop.bounds, to: bitmap)
+                try bitmap.representation(using: .png, properties: [:])!.write(to: directory.appending(path: "control-pinned-\(palette.rawValue).png"))
+            }
             for dark in [true, false] {
                 let content = ControlPanel.picture(state, expanded: true)
                 let window = NSWindow(contentRect: content.frame, styleMask: [.borderless], backing: .buffered, defer: false)
@@ -160,6 +181,7 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
                 var config = Config()
                 config.motion = false
                 config.language = demoLanguage
+                if let demoPalette { config.palette = demoPalette }
                 model.apply(config)
                 // The columns take 0.7 s of each second to reach the new value.
                 let part = min(1, Double(frame % 15) / 15 / 0.7)
@@ -189,7 +211,17 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
                     samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
                 bitmap.size = frameRect.size
                 backdrop.layer?.render(in: NSGraphicsContext(bitmapImageRep: bitmap)!.cgContext)
-                let name = String(format: "%dx%d-%03d.png", Int(width), Int(height), frame)
+                let name = (demoPalette.map { $0.rawValue + "-" } ?? "") + String(format: "%dx%d-%03d.png", Int(width), Int(height), frame)
+                // Where the process rows are, for anything that animates them apart from the picture.
+                if frame == 0 {
+                    let scene = SceneBuilder(
+                        snapshot: model.snapshot, machine: model.machine, modules: model.config.shown, style: model.style(scale: model.choice.scale)
+                    ).build(model.choice)
+                    let rows = (scene.processes.map { item in item.rows.indices.map { item.frame(at: $0).offsetBy(dx: item.rect.minX, dy: item.rect.minY) } } ?? [])
+                        .map { [$0.minX, $0.minY, $0.width, $0.height] }
+                    let facts: [String: Any] = ["width": frameRect.width, "height": frameRect.height, "rows": rows]
+                    try JSONSerialization.data(withJSONObject: facts).write(to: directory.appending(path: name.replacingOccurrences(of: "-000.png", with: ".json")))
+                }
                 try bitmap.representation(using: .png, properties: [:])!.write(to: directory.appending(path: name))
             }
         }
