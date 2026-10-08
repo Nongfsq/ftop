@@ -26,6 +26,19 @@ private let demoSizeList: [(Double, Double)]? = ProcessInfo.processInfo.environm
 private let demoScale = ProcessInfo.processInfo.environment["FTOP_DEMO_SCALE"].flatMap { Double($0) } ?? 2
 /// `FTOP_DEMO_PALETTE=warm` draws the demo frames in another palette, into files with that name in front.
 private let demoPalette = ProcessInfo.processInfo.environment["FTOP_DEMO_PALETTE"].flatMap { PaletteID(rawValue: $0) }
+/// `FTOP_RENDER_SCALE=4` writes the control block and card pictures at that many pixels per point.
+private let renderScale = ProcessInfo.processInfo.environment["FTOP_RENDER_SCALE"].flatMap { Double($0) }
+
+/// A bitmap to capture `view` into: the screen's own scale, or `FTOP_RENDER_SCALE` when set.
+@MainActor
+private func sharpBitmap(for view: NSView) -> NSBitmapImageRep? {
+    guard let renderScale else { return view.bitmapImageRepForCachingDisplay(in: view.bounds) }
+    let bitmap = NSBitmapImageRep(
+        bitmapDataPlanes: nil, pixelsWide: Int(view.bounds.width * renderScale), pixelsHigh: Int(view.bounds.height * renderScale), bitsPerSample: 8,
+        samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+    bitmap?.size = view.bounds.size
+    return bitmap
+}
 private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAMES"].flatMap { Int($0) } ?? 1
 
 @MainActor
@@ -100,7 +113,7 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
                 backdrop.addSubview(content)
                 window.contentView = backdrop
                 window.layoutIfNeeded()
-                let bitmap = try #require(backdrop.bitmapImageRepForCachingDisplay(in: backdrop.bounds))
+                let bitmap = try #require(sharpBitmap(for: backdrop))
                 backdrop.cacheDisplay(in: backdrop.bounds, to: bitmap)
                 try bitmap.representation(using: .png, properties: [:])!
                     .write(to: directory.appending(path: "control-\(language.rawValue)-\(expanded ? "open" : "closed").png"))
@@ -120,7 +133,7 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
                 backdrop.addSubview(content)
                 window.contentView = backdrop
                 window.layoutIfNeeded()
-                let bitmap = try #require(backdrop.bitmapImageRepForCachingDisplay(in: backdrop.bounds))
+                let bitmap = try #require(sharpBitmap(for: backdrop))
                 backdrop.cacheDisplay(in: backdrop.bounds, to: bitmap)
                 try bitmap.representation(using: .png, properties: [:])!.write(to: directory.appending(path: "control-pinned-\(palette.rawValue).png"))
             }
@@ -134,7 +147,7 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
                 backdrop.addSubview(content)
                 window.contentView = backdrop
                 window.layoutIfNeeded()
-                let bitmap = try #require(backdrop.bitmapImageRepForCachingDisplay(in: backdrop.bounds))
+                let bitmap = try #require(sharpBitmap(for: backdrop))
                 backdrop.cacheDisplay(in: backdrop.bounds, to: bitmap)
                 try bitmap.representation(using: .png, properties: [:])!
                     .write(to: directory.appending(path: "settings-\(language.rawValue)\(dark ? "-dark" : "").png"))
@@ -165,7 +178,7 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
         backdrop.addSubview(content)
         window.contentView = backdrop
         window.layoutIfNeeded()
-        let bitmap = try #require(backdrop.bitmapImageRepForCachingDisplay(in: backdrop.bounds))
+        let bitmap = try #require(sharpBitmap(for: backdrop))
         backdrop.cacheDisplay(in: backdrop.bounds, to: bitmap)
         try bitmap.representation(using: .png, properties: [:])!.write(to: directory.appending(path: "card.png"))
         Strings.language = .auto
