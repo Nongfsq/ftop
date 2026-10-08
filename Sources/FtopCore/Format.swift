@@ -51,6 +51,16 @@ public enum Format {
         "\(Int(celsius.rounded()))°"
     }
 
+    /// Watts with one decimal, for detail: "18.6".
+    public static func watts(_ watts: Double) -> String {
+        decimal(max(0, watts))
+    }
+
+    /// Whole watts, for the one figure beside the temperature: "19".
+    public static func wattsRounded(_ watts: Double) -> String {
+        String(Int(max(0, watts).rounded()))
+    }
+
     private static func decimal(_ value: Double) -> String {
         String(format: "%.1f", value)
     }

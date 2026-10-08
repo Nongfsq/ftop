@@ -87,6 +87,21 @@ func probe(json: Bool) {
         print("Network down \(Format.rate(network.downBytesPerSecond).text), up \(Format.rate(network.upBytesPerSecond).text)")
     case .unavailable(let reason): print("Network unavailable: \(reason)")
     }
+    switch snapshot.gpu {
+    case .value(let gpu):
+        let frequency = gpu.frequencyMHz.value.map { Format.gigahertz($0) + " GHz" } ?? "frequency unavailable: \(gpu.frequencyMHz.reason ?? "")"
+        let memory = gpu.memoryBytes.value.map { Format.gigabytes($0) + " GB in use" } ?? "memory unavailable"
+        let temperature = gpu.temperature.value.map { "\(Format.degrees($0.celsius)) from \($0.sensorCount) sensors" } ?? "temperature unavailable"
+        print("GPU \(Format.percent(gpu.usage))%, \(frequency), \(memory), \(temperature)")
+    case .unavailable(let reason): print("GPU unavailable: \(reason)")
+    }
+    switch snapshot.power {
+    case .value(let power):
+        let input = power.inputWatts.value.map { Format.watts($0) + " W" } ?? "unavailable"
+        let gpu = power.gpuWatts.value.map { Format.watts($0) + " W" } ?? "unavailable"
+        print("Power \(Format.watts(power.systemWatts)) W whole machine, adapter \(input), GPU \(gpu)")
+    case .unavailable(let reason): print("Power unavailable: \(reason)")
+    }
     switch snapshot.processes {
     case .value(let list):
         print("Processes (\(list.coversAllUsers ? "all users" : "your processes only; run `sudo ftop grant` to include system processes"))")
@@ -116,6 +131,20 @@ func doctor() {
     }
     line("memory", snapshot.memory.value != nil, snapshot.memory.reason ?? "used, compressed, swap, pressure")
     line("network", snapshot.network.value != nil, snapshot.network.reason ?? "64-bit counters on en* interfaces")
+    if let gpu = snapshot.gpu.value {
+        line("gpu usage", true, "one figure for the whole GPU, from the graphics driver")
+        line("gpu frequency", gpu.maxFrequencyMHz != nil, gpu.maxFrequencyMHz == nil ? gpu.frequencyMHz.reason ?? "" : "read through IOReport without admin rights")
+        line("gpu memory", gpu.memoryBytes.value != nil, gpu.memoryBytes.reason ?? "unified memory the GPU holds")
+        line("gpu temperature", gpu.temperature.value != nil, gpu.temperature.reason ?? "\(gpu.temperature.value!.sensorCount) controller sensors")
+    } else {
+        line("gpu", false, snapshot.gpu.reason ?? "")
+    }
+    if let power = snapshot.power.value {
+        line("power", true, "whole machine, from the controller")
+        line("gpu power", power.gpuWatts.value != nil, power.gpuWatts.reason ?? "read through IOReport without admin rights")
+    } else {
+        line("power", false, snapshot.power.reason ?? "")
+    }
     if let list = snapshot.processes.value {
         if list.helperOutdated {
             line(

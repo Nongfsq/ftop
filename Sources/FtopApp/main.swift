@@ -35,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var resizeStart: NSRect?
     /// True while the window is springing to its layout; nothing else may move it then.
     private var settling = false
+    private let glide = FrameGlide()
     private var statusText = ""
     private var statusTick = 0
 
@@ -69,8 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         updater.mode = model.config.updates
         updater.onChange = { [weak self] in
             guard let self else { return }
-            self.model.canvas.menu = self.buildMenu()
-            self.settings?.setUpdateStatus(self.updateStatus, action: self.updateAction)
+            self.control.refresh(self.controlState)
         }
         updater.willRelaunch = { [weak self] in
             guard let self, !self.panel.isVisible else { return }
@@ -176,7 +176,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         canvas.autoresizingMask = [.width, .height]
         canvas.onTogglePin = { [weak self] in self?.toggleFloating() }
         canvas.onHide = { [weak self] in self?.hidePanel() }
-        canvas.menu = buildMenu()
+        canvas.onSort = { [weak self] sort in self?.setProcessSort(sort) }
+        canvas.onContextMenu = { [weak self] point in self?.showControl(at: point) }
         glass.addSubview(canvas)
         panel.contentView = glass
         applyMinimumSize()
@@ -222,20 +223,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             x: anchor.right ? old.maxX - size.width : old.minX, y: anchor.top ? old.maxY - size.height : old.minY,
             width: size.width, height: size.height)
         guard frame != old else { return }
-        if animated, model.config.motion, model.motionAllowed {
+        if animated, model.config.motion, model.motionAllowed, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             settling = true
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.2
-                // Slightly past the target and back: the window settles like a spring.
-                context.timingFunction = CAMediaTimingFunction(controlPoints: 0.25, 1.25, 0.45, 1)
-                panel.animator().setFrame(frame, display: true)
-            } completionHandler: { [weak self] in
-                MainActor.assumeIsolated {
-                    self?.settling = false
-                    self?.snapToMargins()
-                }
+            glide.run(panel, to: frame) { [weak self] in
+                self?.settling = false
+                self?.snapToMargins()
             }
         } else {
+            glide.stop()
             panel.setFrame(frame, display: true)
         }
         UserDefaults.standard.set(try? JSONEncoder().encode(model.choice), forKey: Self.choiceKey)
@@ -251,6 +246,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func windowWillStartLiveResize(_ notification: Notification) {
+        glide.stop()
+        settling = false
         resizeStart = panel.frame
         model.canvas.dismissHover()
     }
@@ -336,7 +333,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             sampler.stop()
             return
         }
-        sampler.start(interval: model.config.interval, modules: model.config.modules, usageOnly: wanted == .usageOnly) { [weak self] snapshot in
+        sampler.start(interval: model.config.interval, modules: model.config.shown, usageOnly: wanted == .usageOnly) { [weak self] snapshot in
             Task { @MainActor in self?.ingest(snapshot) }
         }
     }
@@ -388,7 +385,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func statusItemClicked() {
         guard let event = NSApp.currentEvent, let button = statusItem?.button else { return }
         if event.type == .rightMouseUp || event.modifierFlags.contains(.control) {
-            buildMenu().popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.maxY + 5), in: button)
+            // Under the number, like the menu it replaces.
+            let below = button.window?.convertToScreen(button.convert(button.bounds, to: nil)) ?? .zero
+            showControl(at: NSPoint(x: below.minX, y: below.minY - 6))
         } else if panelShowing {
             hidePanel()
         } else {
@@ -398,16 +397,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     // MARK: Settings
 
-    private var settings: SettingsWindowController?
+    /// The one block of settings, in place of a menu and a settings window.
+    private lazy var control: ControlPanel = {
+        let control = ControlPanel(state: controlState)
+        control.onChange = { [weak self] config, key, value in
+            ConfigStore.update(key: key, value: value)
+            self?.apply(config)
+        }
+        control.onTogglePanel = { [weak self] in self?.togglePanel() }
+        control.onQuit = { [weak self] in self?.quit() }
+        control.onOpenFile = { [weak self] in self?.openConfig() }
+        control.onUpdate = { [weak self] in self?.updateButtonPressed() }
+        return control
+    }()
+
+    private var controlState: ControlPanel.State {
+        // On, and the machine gives no reading for it: shown dimmed.
+        var unreadable = Set<ModuleID>()
+        if let snapshot = model.snapshot {
+            let shown = Set(model.config.shown)
+            if shown.contains(.gpu), snapshot.gpu.value == nil { unreadable.insert(.gpu) }
+            if shown.contains(.power), snapshot.power.value == nil { unreadable.insert(.power) }
+            if shown.contains(.network), snapshot.network.value == nil { unreadable.insert(.network) }
+        }
+        return ControlPanel.State(
+            config: model.config, panelVisible: panel?.isVisible ?? true, unreadable: unreadable, updateStatus: updateStatus, updateAction: updateAction)
+    }
+
+    private func showControl(at point: NSPoint) {
+        control.show(controlState, at: point)
+    }
 
     private func apply(_ config: Config) {
-        let needsRestart = config.interval != model.config.interval || config.modules != model.config.modules
+        let needsRestart = config.interval != model.config.interval || config.shown != model.config.shown
         let layoutChanged = model.apply(config)
         applyFloating()
         updateStatusItem()
         updater.mode = config.updates
-        model.canvas.menu = buildMenu()
-        settings?.refresh(config: config)
+        control.refresh(controlState)
         if layoutChanged { relayout() } else { model.render() }
         updateSampling(restart: needsRestart)
     }
@@ -512,19 +539,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         apply(config)
     }
 
-    @objc private func openSettings() {
-        if settings == nil {
-            let controller = SettingsWindowController(config: model.config)
-            controller.onChange = { [weak self] config, key, value in
-                ConfigStore.update(key: key, value: value)
-                self?.apply(config)
-            }
-            controller.onOpenFile = { [weak self] in self?.openConfig() }
-            controller.onCheckUpdate = { [weak self] in self?.updateButtonPressed() }
-            settings = controller
-        }
-        settings?.setUpdateStatus(updateStatus, action: updateAction)
-        settings?.show(config: model.config)
+    private func setProcessSort(_ sort: ProcessSort) {
+        var config = model.config
+        guard config.processSort != sort else { return }
+        config.processSort = sort
+        ConfigStore.update(key: "processSort", value: "\"\(sort.rawValue)\"")
+        apply(config)
+    }
+
+    @objc private func toggleModule(_ item: NSMenuItem) {
+        guard let raw = item.representedObject as? String, let module = ModuleID(rawValue: raw) else { return }
+        var config = model.config
+        let line = config.setShown(module, !config.shown.contains(module))
+        ConfigStore.update(key: line.key, value: line.value)
+        apply(config)
     }
 
     @objc private func openConfig() {
@@ -536,38 +564,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             let textEdit = URL(fileURLWithPath: "/System/Applications/TextEdit.app")
             NSWorkspace.shared.open([Config.fileURL], withApplicationAt: textEdit, configuration: NSWorkspace.OpenConfiguration())
         }
-    }
-
-    private func buildMenu() -> NSMenu {
-        let menu = NSMenu()
-        func add(_ title: String, _ action: Selector, checked: Bool = false) -> NSMenuItem {
-            let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-            item.target = self
-            item.state = checked ? .on : .off
-            menu.addItem(item)
-            return item
-        }
-        if case .available(let version) = updater.state, Updater.canInstall {
-            _ = add(Strings.pick("Install Update \(version)", "安装更新 \(version)"), #selector(installUpdate))
-            menu.addItem(.separator())
-        }
-        if panel?.isVisible == true {
-            _ = add(Strings.pick("Hide Panel", "收起面板"), #selector(hidePanel))
-        } else {
-            _ = add(Strings.pick("Show Panel", "显示面板"), #selector(showPanel))
-        }
-        _ = add(Strings.pick("Keep on Top", "置顶"), #selector(toggleFloating), checked: model.config.floating)
-        _ = add(Strings.pick("Show in Menu Bar", "在菜单栏显示"), #selector(toggleMenuBar), checked: model.config.menuBar)
-        menu.addItem(.separator())
-        for palette in PaletteID.allCases {
-            let item = add(palette.displayName, #selector(choosePalette(_:)), checked: palette == model.config.palette)
-            item.representedObject = palette.rawValue
-        }
-        menu.addItem(.separator())
-        _ = add(Strings.pick("Settings…", "设置…"), #selector(openSettings))
-        menu.addItem(.separator())
-        _ = add(Strings.pick("Quit ftop", "退出 ftop"), #selector(quit))
-        return menu
     }
 }
 
@@ -622,3 +618,65 @@ let delegate = AppDelegate()
 application.delegate = delegate
 application.setActivationPolicy(.accessory)
 application.run()
+
+/// Takes a window to a frame in step with the display.
+///
+/// AppKit's own window animation moves on a timer of its own, which shows as steps on a
+/// fast display, and a curve that passes the target comes back one pixel at a time. This
+/// sets one frame per refresh and slows into the target without passing it.
+@MainActor
+final class FrameGlide: NSObject {
+    static let duration: Double = 0.26
+
+    private var link: CADisplayLink?
+    private weak var window: NSWindow?
+    private var from = NSRect.zero
+    private var to = NSRect.zero
+    private var began: CFTimeInterval = 0
+    private var done: (() -> Void)?
+
+    func run(_ window: NSWindow, to frame: NSRect, done: @escaping () -> Void) {
+        stop()
+        guard let view = window.contentView else {
+            window.setFrame(frame, display: true)
+            done()
+            return
+        }
+        self.window = window
+        from = window.frame
+        to = frame
+        began = CACurrentMediaTime()
+        self.done = done
+        let link = view.displayLink(target: self, selector: #selector(step(_:)))
+        link.add(to: .main, forMode: .common)
+        self.link = link
+    }
+
+    /// Ends a glide where it is, without calling its completion.
+    func stop() {
+        link?.invalidate()
+        link = nil
+        done = nil
+    }
+
+    @objc private func step(_ link: CADisplayLink) {
+        guard let window else { return stop() }
+        let progress = min(1, max(0, (link.targetTimestamp - began) / Self.duration))
+        guard progress < 1 else {
+            window.setFrame(to, display: true)
+            let done = self.done
+            stop()
+            done?()
+            return
+        }
+        // Fast at first, since the hand has just let go, then slowing all the way in.
+        let eased = 1 - pow(1 - progress, 4)
+        let pixel = 1 / window.backingScaleFactor
+        func between(_ a: CGFloat, _ b: CGFloat) -> CGFloat { ((a + (b - a) * eased) / pixel).rounded() * pixel }
+        let minX = between(from.minX, to.minX)
+        let minY = between(from.minY, to.minY)
+        // Edges, not sizes, so an edge that stays put is not moved by rounding.
+        window.setFrame(
+            NSRect(x: minX, y: minY, width: between(from.maxX, to.maxX) - minX, height: between(from.maxY, to.maxY) - minY), display: true)
+    }
+}

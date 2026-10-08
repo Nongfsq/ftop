@@ -60,8 +60,8 @@ def frame(size, index=0):
 
 
 # 1. The same panel at six sizes.
-canvas = wallpaper(2400, 1290)
-for size, x, y in [("300x420", 110, 110), ("660x230", 820, 110), ("480x260", 820, 674), ("200x150", 1890, 674), ("280x30", 110, 1060), ("64x26", 110, 1160)]:
+canvas = wallpaper(2400, 1400)
+for size, x, y in [("300x420", 110, 110), ("660x230", 820, 110), ("480x260", 820, 674), ("270x150", 1830, 674), ("96x32", 1830, 1020), ("400x30", 110, 1250)]:
     place(canvas, frame(size), x, y)
 canvas.save(out / "sizes.png", optimize=True)
 
@@ -71,11 +71,28 @@ canvas = wallpaper(panel.width + 240, panel.height + 240)
 place(canvas, panel, 120, 110)
 canvas.save(out / "large.png", optimize=True)
 
-# 3. The settings window. The render has a transparent background and dark text, which
-# disappears on a dark page, so it gets the window's own light background.
+# 3. The settings: the block as a right-click brings it up, and with "More" open.
 if len(sys.argv) > 3:
-    content = Image.open(sys.argv[3]).convert("RGBA")
-    window = Image.new("RGBA", content.size, (0, 0, 0, 0))
-    window.paste(Image.new("RGBA", content.size, (236, 236, 236, 255)), (0, 0), rounded_mask(content.size, 24))
-    window.alpha_composite(content)
-    window.save(out / "settings.png", optimize=True)
+    render = Path(sys.argv[3])
+    closed = Image.open(render / "control-en-closed.png").convert("RGBA")
+    opened = Image.open(render / "control-en-open.png").convert("RGBA")
+    gap, edge = 90, 110
+    canvas = wallpaper(closed.width + opened.width + gap + edge * 2, opened.height + edge * 2)
+    RADIUS = 36  # the block's 18 pt corner at 2x
+    place(canvas, closed, edge, edge)
+    place(canvas, opened, edge + closed.width + gap, edge)
+    canvas.save(out / "settings.png", optimize=True)
+
+# 4. The panel through a few seconds, when the frames directory holds a loop.
+loop = sorted(frames.glob("660x230-*.png"))
+if len(loop) > 1:
+    first = Image.open(loop[0])
+    base = wallpaper(first.width + 200, first.height + 200)
+    shots = []
+    for path in loop:
+        shot = base.copy()
+        place(shot, Image.open(path).convert("RGBA"), 100, 90)
+        shots.append(shot.resize((shot.width // 2, shot.height // 2), Image.LANCZOS))
+    palette = shots[0].quantize(colors=255, method=Image.MEDIANCUT, dither=Image.NONE)
+    stills = [shot.quantize(palette=palette, dither=Image.NONE) for shot in shots]
+    stills[0].save(out / "live.gif", save_all=True, append_images=stills[1:], duration=66, loop=0, optimize=False)

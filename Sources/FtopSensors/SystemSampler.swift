@@ -10,6 +10,8 @@ public final class SystemSampler: @unchecked Sendable {
     private let memory = MemoryProvider()
     private let network = NetworkProvider()
     private let processes = ProcessProvider()
+    private let gpu = GPUProvider()
+    private let power = PowerProvider()
     private var modules: Set<ModuleID> = Set(ModuleID.allCases)
     private var usageOnly = false
     private var tick = 0
@@ -63,7 +65,9 @@ public final class SystemSampler: @unchecked Sendable {
             cpu: modules.contains(.cpu) ? cpu.sample(detail: !usageOnly) : .unavailable(off),
             memory: modules.contains(.memory) ? memory.sample() : .unavailable(off),
             network: modules.contains(.network) ? network.sample(now: now) : .unavailable(off),
-            processes: modules.contains(.processes) ? lastProcesses : .unavailable(off)
+            processes: modules.contains(.processes) ? lastProcesses : .unavailable(off),
+            gpu: modules.contains(.gpu) ? gpu.sample() : .unavailable(off),
+            power: modules.contains(.power) ? power.sample(gpuWatts: gpu.watts(now: now)) : .unavailable(off)
         )
     }
 }

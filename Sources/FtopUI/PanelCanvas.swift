@@ -16,12 +16,25 @@ import FtopCore
 public final class PanelCanvasView: NSView {
     public var onTogglePin: () -> Void = {}
     public var onHide: () -> Void = {}
+    /// The user chose what the process list is ranked by.
+    public var onSort: (ProcessSort) -> Void = { _ in }
+    /// A right-click or control-click on the panel, with the pointer's place on screen.
+    public var onContextMenu: (NSPoint) -> Void = { _ in }
 
     private var scene = Scene()
     private var style = PanelStyle()
     private var origin: CGPoint = .zero
     private let content = NSView()
     private let barsView = CoreBarsView()
+    private let arcsView = ArcsView()
+    private let rowsView = ProcessRowsView()
+    private let card = ProcessCardWindow()
+    /// The row whose card is open.
+    private var cardKey: String?
+    /// A click that began on something clickable, until it ends or turns into a drag.
+    private var pressing: (region: ClickRegion, start: CGPoint)?
+    private var monitors: [Any] = []
+    private var activation: NSObjectProtocol?
     private let controls = ControlsView()
     private let chip = ChipWindow()
     private var pointer: CGPoint?
@@ -47,6 +60,8 @@ public final class PanelCanvasView: NSView {
         content.layer?.contentsGravity = .resize
         addSubview(content)
         addSubview(barsView)
+        addSubview(arcsView)
+        addSubview(rowsView)
         addSubview(controls)
         controls.alphaValue = 0
         controls.pin.target = self
@@ -67,7 +82,107 @@ public final class PanelCanvasView: NSView {
     /// `isMovableByWindowBackground`, which makes AppKit recompute drag regions on every frame.
     public override func mouseDown(with event: NSEvent) {
         hideChip()
+        let point = convert(event.locationInWindow, from: nil)
+        guard let region = scene.click(at: CGPoint(x: point.x - origin.x, y: point.y - origin.y)) else {
+            closeCard()
+            window?.performDrag(with: event)
+            return
+        }
+        pressing = (region, point)
+        if case .process(let key) = region.action { rowsView.press(key) }
+    }
+
+    /// A press that travels is a drag of the window after all.
+    public override func mouseDragged(with event: NSEvent) {
+        guard let pressing else { return }
+        let point = convert(event.locationInWindow, from: nil)
+        guard abs(point.x - pressing.start.x) > 3 || abs(point.y - pressing.start.y) > 3 else { return }
+        self.pressing = nil
+        rowsView.press(nil)
+        closeCard()
         window?.performDrag(with: event)
+    }
+
+    public override func mouseUp(with event: NSEvent) {
+        guard let pressing else { return }
+        self.pressing = nil
+        rowsView.press(nil)
+        let point = convert(event.locationInWindow, from: nil)
+        guard pressing.region.rect.contains(CGPoint(x: point.x - origin.x, y: point.y - origin.y)) else { return }
+        switch pressing.region.action {
+        case .sort(let sort):
+            closeCard()
+            onSort(sort)
+        case .process(let key):
+            if cardKey == key { closeCard() } else { openCard(key) }
+        }
+    }
+
+    // MARK: The process card
+
+    /// The panel has no menu of its own; the control block stands in for it.
+    public override func menu(for event: NSEvent) -> NSMenu? {
+        dismissHover()
+        onContextMenu(NSEvent.mouseLocation)
+        return nil
+    }
+
+    private func openCard(_ key: String) {
+        cardKey = key
+        rowsView.hold(key)
+        hideChip()
+        rowsView.light(nil)
+        refreshCard()
+        guard monitors.isEmpty else { return }
+        // A click anywhere else, another app coming forward, or the panel moving puts the card away.
+        if let monitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown],
+            handler: { [weak self] _ in
+                MainActor.assumeIsolated { self?.closeCard() }
+            })
+        {
+            monitors.append(monitor)
+        }
+        if let monitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.keyDown, .rightMouseDown],
+            handler: { [weak self] event in
+                MainActor.assumeIsolated {
+                    // Escape.
+                    if event.type != .keyDown || event.keyCode == 53 { self?.closeCard() }
+                }
+                return event
+            })
+        {
+            monitors.append(monitor)
+        }
+        activation = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.closeCard() }
+        }
+    }
+
+    public func closeCard() {
+        guard cardKey != nil else { return }
+        cardKey = nil
+        rowsView.hold(nil)
+        card.dismiss(animated: style.motion)
+        refreshHover()
+        monitors.forEach(NSEvent.removeMonitor)
+        monitors = []
+        if let activation { NSWorkspace.shared.notificationCenter.removeObserver(activation) }
+        activation = nil
+    }
+
+    /// Keeps the open card on its row with the row's latest figures; a row that left the list takes its card with it.
+    private func refreshCard() {
+        guard let key = cardKey else { return }
+        guard let window, let row = scene.processes?.rows.first(where: { $0.key == key }), let frame = rowsView.frame(of: key) else {
+            closeCard()
+            return
+        }
+        let inWindow = rowsView.convert(frame, to: nil)
+        card.show(row.card, style: style, anchor: window.convertToScreen(inWindow), parent: window)
     }
 
     // MARK: Showing a scene
@@ -94,6 +209,7 @@ public final class PanelCanvasView: NSView {
         controls.setPinned(pinned)
         placeContent()
         refreshHover()
+        refreshCard()
     }
 
     private func changedRects(from old: Scene, to new: Scene) -> [CGRect] {
@@ -203,7 +319,8 @@ public final class PanelCanvasView: NSView {
 
     public override func layout() {
         super.layout()
-        placeContent()
+        // The window changed size around the same scene: move what is drawn, redraw nothing.
+        placeContent(moveOnly: true)
     }
 
     /// Moved to a screen with another pixel density or color space: draw again for it.
@@ -214,7 +331,7 @@ public final class PanelCanvasView: NSView {
     }
 
     /// Centers the scene; while the window is being dragged it is briefly larger than the scene.
-    private func placeContent() {
+    private func placeContent(moveOnly: Bool = false) {
         let pixel = 1 / (window?.backingScaleFactor ?? 2)
         let x = ((bounds.width - scene.size.width) / 2 / pixel).rounded() * pixel
         let y = ((bounds.height - scene.size.height) / 2 / pixel).rounded() * pixel
@@ -227,10 +344,20 @@ public final class PanelCanvasView: NSView {
             barsView.isHidden = false
             let frame = item.rect.offsetBy(dx: origin.x, dy: origin.y)
             if barsView.frame != frame { barsView.frame = frame }
-            barsView.update(item, style: style)
+            if !moveOnly { barsView.update(item, style: style) }
         } else {
             barsView.isHidden = true
         }
+        if arcsView.frame != frame { arcsView.frame = frame }
+        if !moveOnly { arcsView.update(scene.arcs, style: style) }
+        if let item = scene.processes {
+            rowsView.isHidden = false
+            let frame = item.rect.offsetBy(dx: origin.x, dy: origin.y)
+            if rowsView.frame != frame { rowsView.frame = frame }
+        } else {
+            rowsView.isHidden = true
+        }
+        if !moveOnly { rowsView.update(scene.processes, style: style) }
         CATransaction.commit()
         // The buttons need room; small layouts use the right-click menu instead.
         let roomy = bounds.width >= 150 && bounds.height >= 96
@@ -244,6 +371,19 @@ public final class PanelCanvasView: NSView {
         case .circle:
             context.setFillColor(color(shape.paint))
             context.fillEllipse(in: shape.rect)
+        case .badge(let glyph, let tint):
+            // Every badge is the same disc; a gauge adds its arc around the edge.
+            context.setFillColor(color(.badge))
+            context.fillEllipse(in: shape.rect)
+            let side = style.badgeGlyph
+            let box = CGRect(x: shape.rect.midX - side / 2, y: shape.rect.midY - side / 2, width: side, height: side)
+            GlyphArt.draw(glyph, in: box, color: color(tint), context: context)
+        case .toggle(let glyph, let on, let paint):
+            context.setFillColor(color(on ? paint : .badge))
+            context.fillEllipse(in: shape.rect)
+            let side = style.badgeGlyph
+            let box = CGRect(x: shape.rect.midX - side / 2, y: shape.rect.midY - side / 2, width: side, height: side)
+            GlyphArt.draw(glyph, in: box, color: on ? PanelStyle.toggleInkColor.cgColor : color(.secondary), context: context)
         case .meter(let track, let segments, let outline):
             let capsule = CGPath(roundedRect: shape.rect, cornerWidth: shape.rect.height / 2, cornerHeight: shape.rect.height / 2, transform: nil)
             context.saveGState()
@@ -293,6 +433,9 @@ public final class PanelCanvasView: NSView {
         refreshHover()
     }
 
+    /// True while the pointer is on a row of the process list.
+    public private(set) var pointerOnProcesses = false
+
     private func refreshHover() {
         // The buttons appear while the pointer is along the top edge, where a title bar would be.
         let overControls = pointer.map { $0.y < 38 || controls.frame.insetBy(dx: -8, dy: -8).contains($0) } ?? false
@@ -301,6 +444,14 @@ public final class PanelCanvasView: NSView {
         let onButtons = pointer.map { controls.alphaValue > 0 && controls.frame.contains($0) } ?? false
         let region = onButtons ? nil : pointer.flatMap { scene.hover(at: CGPoint(x: $0.x - origin.x, y: $0.y - origin.y)) }
         barsView.highlight(region?.coreIndex)
+        pointerOnProcesses = region?.processKey != nil
+        // While a card is open it is the only thing that speaks: no chip over it, and no other row lighting up under it.
+        guard cardKey == nil else {
+            rowsView.light(nil)
+            hideChip()
+            return
+        }
+        rowsView.light(region?.processKey)
         var text = region?.text
         if text?.isEmpty == true, let index = region?.coreIndex, let cores = scene.bars?.cores, index < cores.count { text = Strings.core(cores[index]) }
         if text?.isEmpty == true { text = nil }
@@ -320,6 +471,7 @@ public final class PanelCanvasView: NSView {
     }
 
     public func dismissHover() {
+        closeCard()
         pointer = nil
         refreshHover()
     }

@@ -16,7 +16,7 @@ private let demoDirectory = ProcessInfo.processInfo.environment["FTOP_DEMO_DIR"]
 /// More than one frame per size gives a sequence at 15 frames a second in which the
 /// readings change once a second and the columns ease to them, as in the running panel.
 private let demoLanguage: Language = ProcessInfo.processInfo.environment["FTOP_DEMO_LANG"] == "zh" ? .zh : .en
-/// `FTOP_DEMO_SIZES=64x26,280x30` replaces the default sizes; `FTOP_DEMO_SCALE` the pixel scale.
+/// `FTOP_DEMO_SIZES=96x32,400x30` replaces the default sizes; `FTOP_DEMO_SCALE` the pixel scale.
 private let demoSizeList: [(Double, Double)]? = ProcessInfo.processInfo.environment["FTOP_DEMO_SIZES"].map {
     $0.split(separator: ",").compactMap { item in
         let parts = item.split(separator: "x").compactMap { Double($0) }
@@ -29,7 +29,7 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
 @MainActor
 @Suite struct RenderTests {
     static let sizes: [(Double, Double)] = [
-        (64, 26), (280, 30), (620, 30), (60, 330), (200, 150), (300, 420), (300, 640), (445, 820), (480, 260), (660, 230), (860, 820),
+        (96, 32), (400, 30), (760, 30), (90, 330), (270, 150), (300, 420), (300, 640), (445, 820), (480, 260), (660, 230), (860, 820),
         (1000, 435), (1049, 500), (1400, 800), (1700, 1000), (700, 1000),
     ]
 
@@ -77,36 +77,60 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
         }
     }
 
-    /// The settings window's contents, in both languages.
+    /// The control block with "More" open, in both languages.
     @Test(.enabled(if: renderDirectory != nil))
     func writeSettingsImages() throws {
         let directory = URL(fileURLWithPath: renderDirectory!)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         for language in [Language.en, .zh] {
             Strings.language = language
-            let controller = SettingsWindowController(config: Config())
-            controller.setUpdateStatus(Strings.pick("Version 0.1.1 · up to date", "版本 0.1.1 · 已是最新"), action: Strings.pick("Check Now", "立即检查"))
-            let content = controller.makeContent()
-            let window = NSWindow(contentRect: .zero, styleMask: [.titled], backing: .buffered, defer: false)
-            // Always the light look, whatever the system is set to: the picture gets a light background.
-            window.appearance = NSAppearance(named: .aqua)
-            content.appearance = NSAppearance(named: .aqua)
-            window.contentView = content
-            window.layoutIfNeeded()
-            let bitmap = try #require(content.bitmapImageRepForCachingDisplay(in: content.bounds))
-            content.cacheDisplay(in: content.bounds, to: bitmap)
-            try bitmap.representation(using: .png, properties: [:])!.write(to: directory.appending(path: "settings-\(language.rawValue).png"))
+            let state = ControlPanel.State(
+                config: Config(), updateStatus: Strings.pick("Version 0.2.0 · up to date", "版本 0.2.0 · 已是最新"), updateAction: Strings.pick("Check Now", "立即检查"))
+            // For the README: the block closed and open, dark, on nothing, to be set on glass.
+            for expanded in [false, true] {
+                let content = ControlPanel.picture(state, expanded: expanded)
+                let window = NSWindow(contentRect: content.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+                window.appearance = NSAppearance(named: .darkAqua)
+                window.isOpaque = false
+                window.backgroundColor = .clear
+                let backdrop = NSView(frame: content.frame)
+                backdrop.wantsLayer = true
+                backdrop.addSubview(content)
+                window.contentView = backdrop
+                window.layoutIfNeeded()
+                let bitmap = try #require(backdrop.bitmapImageRepForCachingDisplay(in: backdrop.bounds))
+                backdrop.cacheDisplay(in: backdrop.bounds, to: bitmap)
+                try bitmap.representation(using: .png, properties: [:])!
+                    .write(to: directory.appending(path: "control-\(language.rawValue)-\(expanded ? "open" : "closed").png"))
+            }
+            for dark in [true, false] {
+                let content = ControlPanel.picture(state, expanded: true)
+                let window = NSWindow(contentRect: content.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+                window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+                let backdrop = NSView(frame: content.frame)
+                backdrop.wantsLayer = true
+                backdrop.layer?.backgroundColor = (dark ? NSColor(white: 0.16, alpha: 1) : NSColor(white: 0.93, alpha: 1)).cgColor
+                backdrop.addSubview(content)
+                window.contentView = backdrop
+                window.layoutIfNeeded()
+                let bitmap = try #require(backdrop.bitmapImageRepForCachingDisplay(in: backdrop.bounds))
+                backdrop.cacheDisplay(in: backdrop.bounds, to: bitmap)
+                try bitmap.representation(using: .png, properties: [:])!
+                    .write(to: directory.appending(path: "settings-\(language.rawValue)\(dark ? "-dark" : "").png"))
+            }
         }
         Strings.language = .auto
     }
 
-    static let demoSizes: [(Double, Double)] = [(64, 26), (280, 30), (200, 150), (300, 420), (480, 260), (660, 230), (860, 500), (1049, 500)]
+    static let demoSizes: [(Double, Double)] = [(96, 32), (400, 30), (270, 150), (300, 420), (480, 260), (660, 230), (860, 500), (1049, 500)]
 
     /// Sample readings for second `step`; the columns are `progress` (0...1) of the way
     /// from the previous second's values.
-    static func demoSnapshot(step: Int, progress: Double = 1) -> Snapshot {
+    /// With `period`, second `period` shows what second 0 does, so the frames loop.
+    static func demoSnapshot(step: Int, progress: Double = 1, period: Int? = nil) -> Snapshot {
+        func wrapped(_ step: Int) -> Int { period.map { ((step % $0) + $0) % $0 } ?? step }
         func usage(_ base: Double, _ index: Int, _ step: Int) -> Double {
-            let t = Double(step)
+            let t = Double(wrapped(step))
             return min(0.97, max(0.04, base + sin(t * 1.9 + Double(index) * 1.7) * 0.2 + sin(t * 0.8 + Double(index) * 0.6) * 0.1))
         }
         var snapshot = Snapshot.sample(performance: 10, efficiency: 4)
@@ -120,7 +144,7 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
             cpu.cores[index].frequencyMHz = .value((efficiency ? 900 : 1000) + value * (efficiency ? 1600 : 3200))
         }
         snapshot.cpu = .value(cpu)
-        let t = Double(step)
+        let t = Double(wrapped(step))
         snapshot.network = .value(
             NetworkSample(downBytesPerSecond: 2_400_000 * (1.2 + sin(t * 1.3)), upBytesPerSecond: 188_000 * (1.3 + cos(t * 1.1))))
         return snapshot
@@ -140,7 +164,8 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
                 // The columns take 0.7 s of each second to reach the new value.
                 let part = min(1, Double(frame % 15) / 15 / 0.7)
                 let eased = 1 - pow(1 - part, 3)
-                model.ingest(Self.demoSnapshot(step: frame / 15, progress: demoFrameCount > 1 ? eased : 1))
+                model.ingest(
+                    Self.demoSnapshot(step: frame / 15, progress: demoFrameCount > 1 ? eased : 1, period: demoFrameCount > 15 ? demoFrameCount / 15 : nil))
                 model.setChoice(model.choice(for: CGSize(width: width, height: height)))
 
                 let frameRect = NSRect(origin: .zero, size: model.hugSize)

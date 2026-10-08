@@ -22,7 +22,7 @@ final class ProcessProvider {
     private var privileged = false
     private let limit: Int
 
-    init(limit: Int = 32) {
+    init(limit: Int = 96) {
         self.limit = limit
     }
 
@@ -50,13 +50,20 @@ final class ProcessProvider {
         if let elapsed = batch.elapsedNanoseconds {
             guard elapsed > 0 else { return .unavailable("waiting for a second sample") }
             let seconds = Double(elapsed) / 1_000_000_000
-            func samples(_ rows: [Row]) -> [ProcessSample] {
-                rows.prefix(limit).map {
-                    ProcessSample(pid: $0.pid, name: $0.name, cpuPercent: Double($0.cpu) / (seconds * 1_000_000_000) * 100, memoryBytes: $0.memory)
+            func samples(_ rows: [Row], by sort: ProcessSort) -> [ProcessSample] {
+                let list = rows.prefix(limit).map {
+                    ProcessSample(
+                        pid: $0.pid, name: $0.name, cpuPercent: Double($0.cpu) / (seconds * 1_000_000_000) * 100, memoryBytes: $0.memory,
+                        appPath: appPath(of: $0.pid, named: $0.name))
                 }
+                return ProcessSample.folded(list, by: sort)
             }
+            let seen = Set((batch.rows + batch.memoryRows).map(\.pid))
+            defer { apps = apps.filter { seen.contains($0.key) } }
             return .value(
-                ProcessList(top: samples(batch.rows), byMemory: samples(batch.memoryRows), coversAllUsers: privileged, helperOutdated: batch.version < 3))
+                ProcessList(
+                    top: samples(batch.rows, by: .cpu), byMemory: samples(batch.memoryRows, by: .memory), coversAllUsers: privileged,
+                    helperOutdated: batch.version < 4))
         }
         return legacySample(batch.rows, now: now)
     }
@@ -77,10 +84,24 @@ final class ProcessProvider {
             guard let before = previous[row.pid],
                 let percent = Metrics.cpuPercent(previousNanoseconds: before, currentNanoseconds: row.cpu, seconds: seconds)
             else { continue }
-            samples.append(ProcessSample(pid: row.pid, name: row.name, cpuPercent: percent, memoryBytes: row.memory))
+            samples.append(
+                ProcessSample(pid: row.pid, name: row.name, cpuPercent: percent, memoryBytes: row.memory, appPath: appPath(of: row.pid, named: row.name)))
         }
         samples.sort { $0.cpuPercent != $1.cpuPercent ? $0.cpuPercent > $1.cpuPercent : $0.memoryBytes > $1.memoryBytes }
-        return .value(ProcessList(top: Array(samples.prefix(limit)), coversAllUsers: privileged, helperOutdated: true))
+        return .value(ProcessList(top: ProcessSample.folded(Array(samples.prefix(limit)), by: .cpu), coversAllUsers: privileged, helperOutdated: true))
+    }
+
+    /// The app each listed process belongs to, looked up once per process. The name is
+    /// kept beside it because a process id can be reused by another program.
+    private var apps: [Int32: (name: String, path: String?)] = [:]
+
+    private func appPath(of pid: Int32, named name: String) -> String? {
+        if let known = apps[pid], known.name == name { return known.path }
+        var buffer = [CChar](repeating: 0, count: 4096)
+        let length = proc_pidpath(pid, &buffer, UInt32(buffer.count))
+        let path = length > 0 ? ProcessSample.appPath(ofExecutable: buffer.withUnsafeBufferPointer { String(cString: $0.baseAddress!) }) : nil
+        apps[pid] = (name, path)
+        return path
     }
 
     private struct Row {

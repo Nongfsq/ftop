@@ -18,6 +18,10 @@ public final class PanelModel {
     /// Candidate sizes at scale 1 for the current machine and settings.
     private var sizes: [LayoutCandidate: Extent] = [:]
 
+    /// The process rankings as shown, which change less often than the readings do.
+    private var cpuRanking = SteadyRanking.cpu
+    private var memoryRanking = SteadyRanking.memory
+
     public init() {}
 
     // MARK: Inputs
@@ -25,7 +29,7 @@ public final class PanelModel {
     /// Returns true when the change can alter the size of the current layout.
     @discardableResult
     public func apply(_ new: Config) -> Bool {
-        let layoutChanged = new.modules != config.modules || new.maxProcesses != config.maxProcesses || new.language != config.language
+        let layoutChanged = new.shown != config.shown || new.maxProcesses != config.maxProcesses || new.language != config.language
         config = new
         Strings.language = new.language
         if layoutChanged { sizes = [:] }
@@ -35,6 +39,12 @@ public final class PanelModel {
     /// Returns true when the core counts changed, which changes every layout's size.
     @discardableResult
     public func ingest(_ new: Snapshot) -> Bool {
+        var new = new
+        if let list = new.processes.value {
+            let elapsed = snapshot.map { min(10, max(0, new.time.timeIntervalSince($0.time))) } ?? 0
+            // Rows stay where they are while the pointer is on them, so a click lands on the row it was aimed at.
+            new.processes = .value(list.steadied(cpu: &cpuRanking, memory: &memoryRanking, elapsed: elapsed, hold: canvas.pointerOnProcesses))
+        }
         snapshot = new
         guard let cpu = new.cpu.value else { return false }
         let shape = MachineShape(performance: cpu.performance.count, efficiency: cpu.efficiency.count)
@@ -59,7 +69,9 @@ public final class PanelModel {
     }
 
     private func builder(scale: Double, live: Bool) -> SceneBuilder {
-        SceneBuilder(snapshot: live ? snapshot : nil, machine: machine, modules: config.modules, style: style(scale: scale))
+        var builder = SceneBuilder(snapshot: live ? snapshot : nil, machine: machine, modules: config.shown, style: style(scale: scale))
+        builder.processSort = config.processSort
+        return builder
     }
 
     /// The size a layout needs. It does not depend on the readings.
@@ -80,7 +92,7 @@ public final class PanelModel {
     /// `coarse` is for the many sizes passed through while an edge is dragged: scale moves
     /// in larger steps, so most of them reuse type sizes that are already typeset.
     public func choice(for size: CGSize, coarse: Bool = false) -> LayoutChoice {
-        let modules = config.modules
+        let modules = config.shown
         var choice = LayoutLadder.choose(
             available: Extent(width: size.width, height: size.height), maxProcesses: config.maxProcesses, showsProcesses: showsProcesses,
             measure: measure, stretch: { SceneBuilder.stretchLimit($0, modules: modules) })

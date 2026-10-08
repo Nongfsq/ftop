@@ -241,3 +241,68 @@ final class NetworkProvider {
         return answer
     }
 }
+
+/// The GPU as a whole: the system reports no figure per GPU core.
+final class GPUProvider {
+    private let sampler = ftop_gpu_sampler_create()
+    private var temperature: Reading<Temperature> = .unavailable("not read yet")
+    private var temperatureAge = 0
+    private var energyTime: TimeInterval?
+
+    deinit { ftop_gpu_sampler_destroy(sampler) }
+
+    func sample() -> Reading<GPUSample> {
+        var stats = ftop_gpu_stats()
+        guard ftop_gpu_read_stats(&stats) == 0, stats.utilization >= 0 else { return .unavailable("the graphics driver reports no GPU utilization") }
+        var raw = ftop_gpu_freq()
+        let frequency: Reading<Double>
+        var top: Double?
+        if ftop_gpu_sampler_update(sampler, &raw) != 0 {
+            frequency = .unavailable("IOReport returned no GPU sample")
+        } else {
+            top = raw.max_mhz > 0 ? raw.max_mhz : nil
+            if raw.mhz > 0 {
+                frequency = .value(raw.mhz)
+            } else if top == nil {
+                frequency = .unavailable("no frequency table fits the states IOReport reports for the GPU")
+            } else {
+                frequency = .unavailable("the GPU was powered down for the whole interval")
+            }
+        }
+        // Temperature moves slowly; read it every fifth sample.
+        if temperatureAge % 5 == 0 { temperature = Self.readTemperature() }
+        temperatureAge += 1
+        return .value(
+            GPUSample(
+                usage: stats.utilization, frequencyMHz: frequency, maxFrequencyMHz: top,
+                memoryBytes: stats.memory_bytes >= 0 ? .value(UInt64(stats.memory_bytes)) : .unavailable("the graphics driver reports no memory in use"),
+                temperature: temperature))
+    }
+
+    /// Average GPU power since the previous call.
+    func watts(now: TimeInterval) -> Reading<Double> {
+        let joules = ftop_gpu_sampler_energy(sampler)
+        defer { energyTime = now }
+        guard joules >= 0 else { return .unavailable("IOReport returned no GPU energy") }
+        guard let energyTime, now > energyTime else { return .unavailable("waiting for a second sample") }
+        return .value(joules / (now - energyTime))
+    }
+
+    private static func readTemperature() -> Reading<Temperature> {
+        var raw = ftop_temperature()
+        guard ftop_smc_gpu_temperature(&raw) == 0 else { return .unavailable("the controller has no GPU temperature sensor") }
+        return .value(Temperature(celsius: raw.average, source: .gpu, sensorCount: Int(raw.sensor_count)))
+    }
+}
+
+/// Power of the whole machine, from the controller.
+struct PowerProvider {
+    func sample(gpuWatts: Reading<Double>) -> Reading<PowerSample> {
+        var system = 0.0
+        guard ftop_smc_read_float("PSTR", &system) == 0, system >= 0 else { return .unavailable("the controller reports no system power (PSTR)") }
+        var input = 0.0
+        let adapter: Reading<Double> =
+            ftop_smc_read_float("PDTR", &input) == 0 && input >= 0 ? .value(input) : .unavailable("the controller reports no adapter power (PDTR)")
+        return .value(PowerSample(systemWatts: system, inputWatts: adapter, gpuWatts: gpuWatts))
+    }
+}

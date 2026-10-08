@@ -419,3 +419,30 @@ Recorded 2026-10-06. Each item replaces the matching decision or amendment above
   `/usr/local/libexec/ftop` is never written by it; a release cannot change what runs
   as root without the owner running `sudo ftop grant` again.
 - Revisit when: releases are signed with a Developer ID (then verify the signer).
+
+## Amendment: GPU and power readings (2026-10-07)
+
+- Sources, all read as a normal user: GPU usage and memory in use from the graphics
+  driver's `PerformanceStatistics` (`IOAccelerator`); GPU frequency from IOReport
+  group "GPU Stats", channel `GPUPH`, weighted by the steps the GPU's own node lists
+  (`sgx`, property `perf-states`); GPU power from IOReport "Energy Model", channel
+  "GPU Energy"; GPU temperature and whole-machine power from the controller (SMC):
+  every key starting "Tg", and `PSTR` (machine) and `PDTR` (adapter).
+- The controller's call layout is not published. It is declared only in `CFtopSys`,
+  and only reads are made. Keys differ between chips, so the "Tg" keys are listed once
+  at start instead of being named.
+- Rejected: IOReport's GPU temperature channels and the HID sensors (the first read 0,
+  the second do not say which sensors are the GPU's); `powermetrics` (needs root);
+  the CPU's share of power (IOReport returns 0 for it without root, and ftop shows
+  nothing rather than a zero).
+- Revisit when: a chip has no `sgx` node or a different step count than `GPUPH`
+  reports (frequency then shows as unavailable), or `PSTR` is missing.
+
+## Amendment: column motion (2026-10-07)
+
+- Replaces "columns ease to each new reading for 0.4 s". Each column's fill is a layer as
+  tall as its track that slides on `position.y`; a reading sets the model value and adds
+  an additive `CAKeyframeAnimation` of the difference, so overlapping moves sum in the
+  render server and the app still does no per-frame work. Constants are in `Theme.swift`.
+- Unmeasured: the render server now animates whenever readings change. Run
+  `scripts/perf.sh` before calling the performance budget met or missed for this motion.

@@ -3,8 +3,116 @@ import FtopCore
 
 /// The core columns, drawn with Core Animation layers.
 ///
-/// Layer animations run in the system's render server, so columns ease to each new
-/// reading without the app doing per-frame work.
+/// How a layer follows a reading. The new value is set at once and an animation plays
+/// back the difference; animations that overlap add up, so a layer that is still moving
+/// when the next reading lands keeps its speed instead of stopping and starting again.
+/// They run in the system's render server at the display's refresh rate.
+@MainActor
+enum Follow {
+    /// What is left of a move, from all of it to none, sampled evenly over its length.
+    /// The curve leaves and arrives with no speed and no acceleration, which is what
+    /// lets moves that overlap add up without a visible seam.
+    private static let remaining: [Double] = {
+        let last = 32
+        return (0...last).map { step in
+            guard step < last else { return 0 }
+            let x = span * Double(step) / Double(last)
+            return (1 + x + x * x / 2) * exp(-x)
+        }
+    }()
+    /// Length of a move in time constants; what is left after this is under a thousandth.
+    private static let span: Double = 12
+
+    /// `least` is the smallest move worth animating, in the key path's own units.
+    static func add(to layer: CALayer, _ keyPath: String, from old: CGFloat, to new: CGFloat, least: CGFloat = 0.25, delay: Double = 0, interval: Double) {
+        let move = old - new
+        guard abs(move) > least else { return }
+        let animation = CAKeyframeAnimation(keyPath: keyPath)
+        animation.values = remaining.map { move * $0 }
+        animation.calculationMode = .cubic
+        animation.isAdditive = true
+        animation.duration = span / PanelStyle.columnFollowRate * min(max(interval, 0.25), PanelStyle.columnFollowLongestInterval)
+        animation.beginTime = layer.convertTime(CACurrentMediaTime(), from: nil) + delay
+        // Hold the old place until this layer's turn in the wave.
+        animation.fillMode = .backwards
+        layer.add(animation, forKey: nil)
+    }
+}
+
+/// The arcs of the ring badges, one layer each.
+final class ArcsView: NSView {
+    private var layers: [CAShapeLayer] = []
+    private var items: [ArcItem] = []
+    private var style = PanelStyle()
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("not used") }
+
+    override var isFlipped: Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    func update(_ new: [ArcItem], style newStyle: PanelStyle) {
+        let moved = new.map(\.rect) != items.map(\.rect) || newStyle.scale != style.scale
+        let recolored = moved || new.map(\.paint) != items.map(\.paint) || newStyle.palette != style.palette
+        items = new
+        style = newStyle
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        if layers.count != new.count {
+            layers.forEach { $0.removeFromSuperlayer() }
+            layers = new.map { _ in
+                let arc = CAShapeLayer()
+                arc.fillColor = nil
+                arc.lineCap = .round
+                layer?.addSublayer(arc)
+                return arc
+            }
+        }
+        for (arc, item) in zip(layers, new) {
+            if moved {
+                arc.removeAllAnimations()
+                arc.frame = item.rect
+                arc.lineWidth = style.badgeRing
+                let radius = (item.rect.width - style.badgeRing) / 2
+                let path = CGMutablePath()
+                // From the top, clockwise as seen on screen.
+                path.addArc(
+                    center: CGPoint(x: item.rect.width / 2, y: item.rect.height / 2), radius: radius, startAngle: -.pi / 2, endAngle: .pi * 1.5,
+                    clockwise: false)
+                arc.path = path
+            }
+            let fraction = CGFloat(min(1, max(0, item.fraction)))
+            if style.motion && !moved {
+                Follow.add(to: arc, "strokeEnd", from: arc.strokeEnd, to: fraction, least: 0.004, interval: style.interval)
+            }
+            arc.strokeEnd = fraction
+        }
+        CATransaction.commit()
+        if recolored { applyColors() }
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyColors()
+    }
+
+    private func applyColors() {
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            for (arc, item) in zip(layers, items) { arc.strokeColor = style.color(item.paint).cgColor }
+            CATransaction.commit()
+        }
+    }
+}
+
+/// Each column is a capsule track with a capsule fill that slides up from below it.
+/// A new reading moves the fill with `Follow`; the app does no per-frame work.
 final class CoreBarsView: NSView {
     private struct Column {
         let track = CALayer()
@@ -39,7 +147,7 @@ final class CoreBarsView: NSView {
 
         if columns.count != item.cores.count {
             columns.forEach { $0.track.removeFromSuperlayer() }
-            columns = item.cores.map { _ in
+            columns = (0..<item.cores.count).map { _ in
                 let column = Column()
                 column.track.masksToBounds = true
                 column.track.addSublayer(column.fill)
@@ -86,18 +194,29 @@ final class CoreBarsView: NSView {
 
     private func layoutColumns() {
         guard let item else { return }
-        let slots = CoreBarsGeometry.slots(kinds: item.cores.map(\.kind), width: item.rect.width, gap: item.gap, groupGap: item.groupGap)
+        let slots = CoreBarsGeometry.slots(
+            kinds: item.cores.map(\.kind), width: item.rect.width, gap: item.gap, groupGap: item.groupGap)
         withoutAnimation {
             for (index, slot) in slots.enumerated() where index < columns.count {
-                // Efficiency cores are drawn slimmer inside the same slot.
-                let width = item.cores[index].kind == .efficiency ? max(2, slot.width * 0.58) : slot.width
+                let column = columns[index]
                 // Snap to device pixels so thin columns keep their gaps.
                 let pixel = 1 / (window?.backingScaleFactor ?? 2)
-                let left = ((slot.x + slot.width / 2 - width / 2) / pixel).rounded() * pixel
-                let frame = CGRect(x: left, y: 0, width: max(pixel, (width / pixel).rounded() * pixel), height: item.rect.height)
-                columns[index].track.frame = frame
-                columns[index].track.cornerRadius = min(4 * style.scale, frame.width / 2.5)
-                columns[index].track.cornerCurve = .continuous
+                let left = (slot.x / pixel).rounded() * pixel
+                let width = max(pixel, (slot.width / pixel).rounded() * pixel)
+                let radius = min(style.coreRadiusLimit, width / 2)
+                column.track.removeAllAnimations()
+                column.fill.removeAllAnimations()
+                column.tick.removeAllAnimations()
+                column.track.frame = CGRect(x: left, y: 0, width: width, height: item.rect.height)
+                column.track.cornerRadius = radius
+                column.track.cornerCurve = .continuous
+                // The fill is as tall as the track and slides; its rounded top is the reading.
+                column.fill.bounds = CGRect(x: 0, y: 0, width: width, height: item.rect.height)
+                column.fill.cornerRadius = radius
+                column.fill.cornerCurve = .continuous
+                let inset = (width * PanelStyle.coreTickInset / pixel).rounded() * pixel
+                column.tick.bounds = CGRect(x: 0, y: 0, width: max(pixel, width - inset * 2), height: style.coreTickHeight)
+                column.tick.cornerRadius = style.coreTickHeight / 2
             }
         }
     }
@@ -106,9 +225,10 @@ final class CoreBarsView: NSView {
         guard let item else { return }
         effectiveAppearance.performAsCurrentDrawingAppearance {
             withoutAnimation {
-                for (index, column) in columns.enumerated() where index < item.cores.count {
-                    column.track.backgroundColor = style.color(.track).cgColor
-                    column.fill.backgroundColor = style.color(item.cores[index].kind == .performance ? .performance : .efficiency).cgColor
+                for (index, column) in columns.enumerated() {
+                    let paint: Paint = item.cores[index].kind == .performance ? .performance : .efficiency
+                    column.track.backgroundColor = PanelStyle.coreTrackColor.cgColor
+                    column.fill.backgroundColor = style.color(paint).cgColor
                     column.tick.backgroundColor = style.color(.ink).withAlphaComponent(0.8).cgColor
                 }
             }
@@ -118,22 +238,25 @@ final class CoreBarsView: NSView {
     private func applyValues(animated: Bool) {
         guard let item else { return }
         CATransaction.begin()
-        if animated {
-            // A soft start and a long settle, most of the way to the next reading, then rest.
-            CATransaction.setAnimationDuration(min(0.7, style.interval * 0.7))
-            CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(controlPoints: 0.3, 0, 0.15, 1))
-        } else {
-            CATransaction.setDisableActions(true)
-        }
-        let tickHeight = max(1.5, 2 * style.scale)
-        for (index, column) in columns.enumerated() where index < item.cores.count {
+        CATransaction.setDisableActions(true)
+        for (index, column) in columns.enumerated() {
             let size = column.track.bounds.size
-            let core = item.cores[index]
+            let usage = item.cores[index].usage
+            let frequency = item.cores[index].frequencyFraction
+            let delay = Double(index) * PanelStyle.columnStagger
             // Layers use a bottom-left origin here, so a column grows upward from y = 0.
-            column.fill.frame = CGRect(x: 0, y: 0, width: size.width, height: size.height * core.usage)
-            if item.showsFrequency, let fraction = core.frequencyFraction {
+            let height = max(size.height * min(1, max(0, usage)), min(size.width, style.coreRestHeight))
+            let fill = CGPoint(x: size.width / 2, y: height - size.height / 2)
+            if animated { Follow.add(to: column.fill, "position.y", from: column.fill.position.y, to: fill.y, delay: delay, interval: style.interval) }
+            column.fill.position = fill
+            if item.showsFrequency, let fraction = frequency {
+                let tickHeight = column.tick.bounds.height
+                let tick = CGPoint(x: size.width / 2, y: tickHeight / 2 + (size.height - tickHeight) * fraction)
+                if animated && !column.tick.isHidden {
+                    Follow.add(to: column.tick, "position.y", from: column.tick.position.y, to: tick.y, delay: delay, interval: style.interval)
+                }
                 column.tick.isHidden = false
-                column.tick.frame = CGRect(x: 0, y: (size.height - tickHeight) * fraction, width: size.width, height: tickHeight)
+                column.tick.position = tick
             } else {
                 column.tick.isHidden = true
             }

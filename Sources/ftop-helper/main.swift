@@ -3,8 +3,8 @@ import Darwin
 // Reports the processes that used the most CPU since the previous request, and the
 // ones holding the most memory.
 //
-// Protocol (version 3): for each line read on stdin, write a header line
-// "ftop-helper 3 <nanoseconds since the previous request>", then one line per process
+// Protocol (version 4; version 3 listed 32 rows where this lists 96): for each line read on stdin, write a header line
+// "ftop-helper 4 <nanoseconds since the previous request>", then one line per process
 // ("pid cpu_nanoseconds_used footprint_bytes name"), busiest first, then a line
 // "memory" and the same kind of lines ordered by memory, then an empty line.
 // The first request has nothing to compare with and lists no processes.
@@ -13,7 +13,8 @@ import Darwin
 // `sudo ftop grant` it sees all of them. It takes no arguments, reads no environment,
 // and writes no files, so the privileged surface is this file alone.
 
-let rowLimit = 32
+// Enough that a large window's list is still full after an app's processes are folded into one row.
+let rowLimit = 96
 
 var timebase = mach_timebase_info_data_t()
 mach_timebase_info(&timebase)
@@ -69,7 +70,7 @@ while let _ = readLine(strippingNewline: true) {
             print(row.pid, nanoseconds(row.used), row.footprint, name.withUnsafeBufferPointer { String(cString: $0.baseAddress!) })
         }
     }
-    print("ftop-helper 3", previousTime == 0 ? 0 : nanoseconds(now - previousTime))
+    print("ftop-helper 4", previousTime == 0 ? 0 : nanoseconds(now - previousTime))
     rows.sort { $0.used != $1.used ? $0.used > $1.used : $0.footprint > $1.footprint }
     write(rows.prefix(rowLimit))
     print("memory")

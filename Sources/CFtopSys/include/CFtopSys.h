@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-// The only place ftop touches Apple's private IOReport and IOHID event APIs.
+// The only place ftop touches Apple's private IOReport and IOHID event APIs and the
+// undocumented controller (SMC) interface.
 // Every function reports failure instead of guessing; callers show "unavailable".
 
 typedef struct {
@@ -37,5 +38,38 @@ typedef struct {
 
 // Returns 0 on success, -1 when no CPU-related thermal sensor answered.
 int ftop_read_temperature(ftop_temperature *out);
+
+// ---- GPU ----
+
+typedef struct {
+    double active;      // 0...1 share of the interval the GPU was powered, or -1
+    double mhz;         // active-time weighted frequency, or -1 when unknown or idle all interval
+    double max_mhz;     // top of the GPU's frequency table, or -1
+} ftop_gpu_freq;
+
+typedef struct ftop_gpu_sampler ftop_gpu_sampler;
+
+ftop_gpu_sampler *ftop_gpu_sampler_create(void);
+void ftop_gpu_sampler_destroy(ftop_gpu_sampler *sampler);
+// Fills `out` with the delta since the previous call. Returns 0, or -1 when no sample is available.
+int ftop_gpu_sampler_update(ftop_gpu_sampler *sampler, ftop_gpu_freq *out);
+// Joules the GPU used since the previous call, or -1.
+double ftop_gpu_sampler_energy(ftop_gpu_sampler *sampler);
+
+typedef struct {
+    double utilization;   // 0...1 as the graphics driver reports it, or -1
+    double memory_bytes;  // unified memory in use by the GPU, or -1
+} ftop_gpu_stats;
+
+// Returns 0 when the graphics driver answered, -1 otherwise.
+int ftop_gpu_read_stats(ftop_gpu_stats *out);
+
+// ---- Controller (SMC) ----
+
+// Average of the controller's GPU temperature sensors (keys starting "Tg"). `source` is not set.
+// Returns 0 on success, -1 when none answered.
+int ftop_smc_gpu_temperature(ftop_temperature *out);
+// Reads one floating-point key such as "PSTR". Returns 0 on success, -1 otherwise.
+int ftop_smc_read_float(const char *key, double *out);
 
 #endif

@@ -33,5 +33,6 @@ result is refined, easy to use, and beautiful.
 
 ## Open
 
-- Which optional modules a large window may add (process icons, finer memory
-  breakdown, GPU and power, battery). The owner has not chosen.
+- Which further optional modules a large window may add (process icons, finer memory
+  breakdown, battery). GPU and power were chosen on 2026-10-07; see the decision
+  document's amendment.

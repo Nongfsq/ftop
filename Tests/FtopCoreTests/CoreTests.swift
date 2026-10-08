@@ -277,3 +277,57 @@ import Testing
         #expect(candidates.allSatisfy { $0.processCount == 0 })
     }
 }
+
+@Suite struct SteadyRankingTests {
+    @Test func closeReadingsDoNotSwapPlaces() {
+        var ranking = SteadyRanking.cpu
+        #expect(ranking.step([("a", 20), ("b", 19), ("c", 5)], elapsed: 0) == ["a", "b", "c"])
+        // The two trade the lead by a point or two every second; the list stays as it is.
+        for turn in 0..<20 {
+            let first = turn.isMultiple(of: 2) ? 18.0 : 21
+            #expect(ranking.step([("a", first), ("b", 39 - first), ("c", 5)], elapsed: 1) == ["a", "b", "c"])
+        }
+    }
+
+    @Test func aClearLeadTakesItsPlaceAtOnceAndLeavesSlowly() {
+        var ranking = SteadyRanking.cpu
+        _ = ranking.step([("a", 20), ("b", 10), ("c", 5)], elapsed: 0)
+        #expect(ranking.step([("a", 20), ("b", 10), ("c", 60)], elapsed: 1) == ["c", "a", "b"])
+        // One quiet second does not send it back down…
+        #expect(ranking.step([("a", 20), ("b", 10), ("c", 5)], elapsed: 1) == ["c", "a", "b"])
+        // …but staying quiet does.
+        var order: [String] = []
+        for _ in 0..<20 { order = ranking.step([("a", 20), ("b", 10), ("c", 5)], elapsed: 1) }
+        #expect(order == ["a", "b", "c"])
+    }
+
+    @Test func aHeldRankingKeepsItsOrderAndPutsArrivalsLast() {
+        var ranking = SteadyRanking.cpu
+        _ = ranking.step([("a", 20), ("b", 10)], elapsed: 0)
+        #expect(ranking.step([("c", 90), ("b", 80), ("a", 1)], elapsed: 1, hold: true) == ["a", "b", "c"])
+        #expect(ranking.step([("c", 90), ("b", 80)], elapsed: 1, hold: true) == ["b", "c"])
+        #expect(ranking.step([("c", 90), ("b", 40)], elapsed: 1) == ["c", "b"])
+    }
+
+    @Test func noEntryStaysBelowOneItClearlyBeats() {
+        var ranking = SteadyRanking.cpu
+        var seed: UInt64 = 7
+        func next() -> Double {
+            seed = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return Double(seed >> 40).truncatingRemainder(dividingBy: 60)
+        }
+        for _ in 0..<50 {
+            let entries = (0..<24).map { (id: "p\($0)", value: next()) }
+            let order = ranking.step(entries, elapsed: 1)
+            #expect(Set(order) == Set(entries.map(\.id)) && order.count == entries.count)
+        }
+        // Once the readings stop moving, nothing is left below an entry it clearly beats.
+        let still = (0..<24).map { (id: "p\($0)", value: Double($0) * 4) }
+        var order: [String] = []
+        for _ in 0..<60 { order = ranking.step(still, elapsed: 1) }
+        let values = order.map { Double($0.dropFirst())! * 4 }
+        for (index, value) in values.enumerated() {
+            #expect(values[..<index].allSatisfy { value <= $0 * (1 + ranking.relative) + ranking.margin })
+        }
+    }
+}
