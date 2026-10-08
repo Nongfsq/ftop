@@ -483,6 +483,17 @@ final class ProcessCardWindow: NSPanel {
 }
 
 @MainActor
+/// The card's contents on their own, for pictures made from the panel's drawing code.
+public enum ProcessCardPicture {
+    public static func view(_ card: ProcessCard, palette: PaletteID = .sea) -> NSView {
+        let face = CardFace()
+        face.set(card, style: PanelStyle(palette: palette))
+        face.frame = NSRect(origin: .zero, size: face.fittingCardSize)
+        return face
+    }
+}
+
+@MainActor
 private final class CardFace: NSView {
     private var card: ProcessCard?
     private var style = PanelStyle()

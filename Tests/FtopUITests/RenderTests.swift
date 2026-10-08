@@ -143,6 +143,34 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
         Strings.language = .auto
     }
 
+    /// The card a click on a process row brings up, with sample figures.
+    @Test(.enabled(if: renderDirectory != nil))
+    func writeCardImage() throws {
+        let directory = URL(fileURLWithPath: renderDirectory!)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        Strings.language = .en
+        let card = ProcessCard(
+            name: "Google Chrome", appPath: "/Applications/Google Chrome.app", cpu: "94", cpuShare: 0.42, memory: "1.0", memoryUnit: "G", memoryShare: 0.12,
+            members: [
+                .init(name: "Google Chrome Helper (Renderer)", value: "51", unit: "%"), .init(name: "Google Chrome Helper", value: "22", unit: "%"),
+                .init(name: "Google Chrome", value: "14", unit: "%"), .init(name: "Google Chrome Helper (GPU)", value: "7", unit: "%"),
+            ])
+        let content = ProcessCardPicture.view(card)
+        let window = NSWindow(contentRect: content.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        let backdrop = NSView(frame: content.frame)
+        backdrop.wantsLayer = true
+        backdrop.addSubview(content)
+        window.contentView = backdrop
+        window.layoutIfNeeded()
+        let bitmap = try #require(backdrop.bitmapImageRepForCachingDisplay(in: backdrop.bounds))
+        backdrop.cacheDisplay(in: backdrop.bounds, to: bitmap)
+        try bitmap.representation(using: .png, properties: [:])!.write(to: directory.appending(path: "card.png"))
+        Strings.language = .auto
+    }
+
     static let demoSizes: [(Double, Double)] = [(96, 32), (400, 30), (270, 150), (300, 420), (480, 260), (660, 230), (860, 500), (1049, 500)]
 
     /// Sample readings for second `step`; the columns are `progress` (0...1) of the way
