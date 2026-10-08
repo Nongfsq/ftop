@@ -16,6 +16,8 @@ public struct FontSpec: Hashable, Sendable {
 /// A color by role, resolved for the current appearance and palette when drawn.
 public enum Paint: Hashable, Sendable {
     case ink, secondary, track, badge, performance, efficiency, gpu, normal, warning, critical
+    /// Core group `group` of `of` groups, fastest first.
+    case core(group: Int, of: Int)
     /// Compressed memory: the pressure color, lighter.
     indirect case faded(Paint)
 }
@@ -198,6 +200,13 @@ public struct PanelStyle: Equatable, Sendable {
 
     var performanceColor: NSColor { Self.nsDynamic(light: palette.colors.pLight, dark: palette.colors.pDark) }
     var efficiencyColor: NSColor { Self.nsDynamic(light: palette.colors.eLight, dark: palette.colors.eDark) }
+    /// Core groups run from the performance color to the efficiency color in even steps,
+    /// so a chip with any number of kinds of core has a color for each.
+    func coreColor(group: Int, of count: Int) -> NSColor {
+        let share = count > 1 ? Double(min(max(0, group), count - 1)) / Double(count - 1) : 0
+        let colors = palette.colors
+        return Self.nsDynamic(light: Self.mix(colors.pLight, colors.eLight, share), dark: Self.mix(colors.pDark, colors.eDark, share))
+    }
     var gpuColor: NSColor { Self.nsDynamic(light: palette.gpuColors.light, dark: palette.gpuColors.dark) }
 
     func color(_ paint: Paint) -> NSColor {
@@ -209,6 +218,7 @@ public struct PanelStyle: Equatable, Sendable {
         case .performance: performanceColor
         case .efficiency: efficiencyColor
         case .gpu: gpuColor
+        case .core(let group, let count): coreColor(group: group, of: count)
         case .normal: Self.normalColor
         case .warning: Self.warningColor
         case .critical: Self.criticalColor
@@ -222,6 +232,15 @@ public struct PanelStyle: Equatable, Sendable {
         case .warning: .warning
         case .critical: .critical
         case nil: .secondary
+        }
+    }
+
+    /// The color `share` of the way from one hex color to another.
+    static func mix(_ first: Int, _ second: Int, _ share: Double) -> Int {
+        [16, 8, 0].reduce(0) { result, shift in
+            let from = Double((first >> shift) & 0xFF)
+            let to = Double((second >> shift) & 0xFF)
+            return result | Int((from + (to - from) * share).rounded()) << shift
         }
     }
 

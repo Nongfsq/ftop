@@ -139,7 +139,7 @@ final class CoreBarsView: NSView {
     func update(_ item: BarsItem, style: PanelStyle) {
         let old = self.item
         let structureChanged =
-            old == nil || old!.cores.map(\.kind) != item.cores.map(\.kind) || old!.rect.size != item.rect.size || old!.gap != item.gap
+            old == nil || old!.cores.map(\.group) != item.cores.map(\.group) || old!.rect.size != item.rect.size || old!.gap != item.gap
             || old!.groupGap != item.groupGap || old!.showsFrequency != item.showsFrequency || style.scale != self.style.scale
         let paletteChanged = style.palette != self.style.palette
         self.item = item
@@ -195,7 +195,7 @@ final class CoreBarsView: NSView {
     private func layoutColumns() {
         guard let item else { return }
         let slots = CoreBarsGeometry.slots(
-            kinds: item.cores.map(\.kind), width: item.rect.width, gap: item.gap, groupGap: item.groupGap)
+            groups: item.cores.map(\.group), width: item.rect.width, gap: item.gap, groupGap: item.groupGap)
         withoutAnimation {
             for (index, slot) in slots.enumerated() where index < columns.count {
                 let column = columns[index]
@@ -225,8 +225,9 @@ final class CoreBarsView: NSView {
         guard let item else { return }
         effectiveAppearance.performAsCurrentDrawingAppearance {
             withoutAnimation {
+                let count = (item.cores.map(\.group).max() ?? 0) + 1
                 for (index, column) in columns.enumerated() {
-                    let paint: Paint = item.cores[index].kind == .performance ? .performance : .efficiency
+                    let paint = Paint.core(group: item.cores[index].group, of: count)
                     column.track.backgroundColor = PanelStyle.coreTrackColor.cgColor
                     column.fill.backgroundColor = style.color(paint).cgColor
                     column.tick.backgroundColor = style.color(.ink).withAlphaComponent(0.8).cgColor

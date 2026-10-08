@@ -121,8 +121,10 @@ func doctor() {
         for core in cpu.cores where !tiers.contains(core.tier) { tiers.append(core.tier) }
         let groups = tiers.map { tier in "\(cpu.cores.count(where: { $0.tier == tier })) \(tier == .unknown ? "unclassified" : tier.rawValue)" }
         line("per-core usage", true, groups.joined(separator: " + ") + " cores")
-        let missing = cpu.cores.compactMap { $0.frequencyMHz.reason }
-        line("per-core frequency", missing.isEmpty, missing.first ?? "read through IOReport without admin rights")
+        // Each kind of core can fail for a reason of its own.
+        var missing: [String] = []
+        for reason in cpu.cores.compactMap({ $0.frequencyMHz.reason }) where !missing.contains(reason) { missing.append(reason) }
+        line("per-core frequency", missing.isEmpty, missing.isEmpty ? "read through IOReport without admin rights" : missing.joined(separator: "; "))
         line(
             "temperature", cpu.temperature.value != nil,
             cpu.temperature.reason ?? "\(cpu.temperature.value!.sensorCount) sensors, \(cpu.temperature.value!.source.rawValue)")
