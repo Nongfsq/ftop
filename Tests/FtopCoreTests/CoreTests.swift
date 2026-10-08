@@ -54,6 +54,22 @@ import Testing
 }
 
 @Suite struct ConfigTests {
+    @Test func menuBarReading() throws {
+        #expect(try Config.decode(Data("{}".utf8)).menuBarShows == .cpu)
+        #expect(try Config.decode(Data(#"{ menuBarShows: "upload" }"#.utf8)).menuBarShows == .upload)
+        let off = "off"
+        let snapshot = Snapshot(
+            time: Date(), cpu: .unavailable(off), memory: .unavailable(off), network: .value(NetworkSample(downBytesPerSecond: 1_240_000, upBytesPerSecond: 84_400)),
+            processes: .unavailable(off), gpu: .unavailable(off),
+            power: .value(PowerSample(systemWatts: 118.6, inputWatts: .unavailable(off), gpuWatts: .unavailable(off))))
+        #expect(MenuBarMetric.download.figure(in: snapshot)?.shortText == "1.2M")
+        #expect(MenuBarMetric.upload.figure(in: snapshot)?.shortText == "84K")
+        #expect(MenuBarMetric.power.figure(in: snapshot)?.shortText == "119W")
+        // Not reported is not zero.
+        #expect(MenuBarMetric.gpu.figure(in: snapshot) == nil)
+        #expect(snapshot.limited(to: [.cpu]).network.value == nil)
+    }
+
     @Test func emptyFileGivesDefaults() throws {
         #expect(try Config.decode(Data("{}".utf8)) == Config())
     }

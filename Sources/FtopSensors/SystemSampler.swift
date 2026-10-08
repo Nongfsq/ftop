@@ -29,11 +29,11 @@ public final class SystemSampler: @unchecked Sendable {
     }
 
     /// Starts or restarts periodic sampling. `handler` runs on the sampler's queue.
-    /// `usageOnly` reads nothing but per-core usage, for when only the menu bar number shows.
+    /// `usageOnly` leaves out the processor's frequencies and temperature, for when only the menu bar item shows.
     public func start(interval: Double, modules: [ModuleID], usageOnly: Bool = false, handler: @escaping @Sendable (Snapshot) -> Void) {
         queue.async {
             self.timer?.cancel()
-            self.modules = usageOnly ? [.cpu] : Set(modules)
+            self.modules = Set(modules)
             self.usageOnly = usageOnly
             let timer = DispatchSource.makeTimerSource(queue: self.queue)
             // Leeway lets the system coalesce wakeups; a late tick is skipped, not queued.

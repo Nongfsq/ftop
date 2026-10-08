@@ -14,6 +14,34 @@ public enum PaletteID: String, Sendable, Codable, CaseIterable {
     case sea, graphite, warm
 }
 
+/// The one reading the menu bar shows.
+public enum MenuBarMetric: String, Sendable, Codable, CaseIterable {
+    case cpu, memory, gpu, download, upload, power
+
+    /// The module that has to be read for it, whether or not the panel shows that module.
+    public var module: ModuleID {
+        switch self {
+        case .cpu: .cpu
+        case .memory: .memory
+        case .gpu: .gpu
+        case .download, .upload: .network
+        case .power: .power
+        }
+    }
+
+    /// The figure as the menu bar writes it, the unit in `shortUnit`; nil when the machine does not report it.
+    public func figure(in snapshot: Snapshot) -> Format.Quantity? {
+        switch self {
+        case .cpu: snapshot.cpu.value.map { Format.share($0.usage) }
+        case .memory: snapshot.memory.value.map { Format.share($0.usedFraction) }
+        case .gpu: snapshot.gpu.value.map { Format.share($0.usage) }
+        case .download: snapshot.network.value.map { Format.compactRate($0.downBytesPerSecond) }
+        case .upload: snapshot.network.value.map { Format.compactRate($0.upBytesPerSecond) }
+        case .power: snapshot.power.value.map { Format.compactWatts($0.systemWatts) }
+        }
+    }
+}
+
 public enum Language: String, Sendable, Codable {
     case auto, en, zh
 }
@@ -38,8 +66,10 @@ public struct Config: Sendable, Codable, Equatable {
     public var processSort: ProcessSort = .cpu
     /// Keep the panel above other windows.
     public var floating: Bool = false
-    /// Show the CPU percentage in the menu bar; clicking it shows or hides the panel.
+    /// Show one reading in the menu bar; clicking it shows or hides the panel.
     public var menuBar: Bool = true
+    /// Which reading that is.
+    public var menuBarShows: MenuBarMetric = .cpu
     /// New releases: install them, only offer them, or never look.
     public var updates: UpdateMode = .install
 
@@ -58,6 +88,7 @@ public struct Config: Sendable, Codable, Equatable {
         processSort = try container.decodeIfPresent(ProcessSort.self, forKey: .processSort) ?? defaults.processSort
         floating = try container.decodeIfPresent(Bool.self, forKey: .floating) ?? defaults.floating
         menuBar = try container.decodeIfPresent(Bool.self, forKey: .menuBar) ?? defaults.menuBar
+        menuBarShows = try container.decodeIfPresent(MenuBarMetric.self, forKey: .menuBarShows) ?? defaults.menuBarShows
         updates = try container.decodeIfPresent(UpdateMode.self, forKey: .updates) ?? defaults.updates
         normalize()
     }
@@ -141,8 +172,12 @@ public struct Config: Sendable, Codable, Equatable {
           // Keep the panel above other windows (the pin button does the same).
           floating: false,
 
-          // Show the CPU percentage in the menu bar; click it to show or hide the panel.
+          // Show one reading in the menu bar; click it to show or hide the panel.
           menuBar: true,
+
+          // Which reading: "cpu", "memory", "gpu", "download", "upload", or "power". It does
+          // not have to be one the panel shows.
+          menuBarShows: "cpu",
 
           // New versions: "install" looks once a day and installs what it finds, "check"
           // only offers it in the right-click menu, "off" never goes online.

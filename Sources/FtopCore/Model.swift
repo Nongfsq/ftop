@@ -301,6 +301,20 @@ public struct Snapshot: Sendable, Codable, Equatable {
         self.gpu = gpu
         self.power = power
     }
+
+    /// The same readings with every module outside `modules` marked as turned off. The
+    /// menu bar may need a module the panel does not show.
+    public func limited(to modules: [ModuleID]) -> Snapshot {
+        let off = "module is turned off"
+        var copy = self
+        if !modules.contains(.cpu) { copy.cpu = .unavailable(off) }
+        if !modules.contains(.memory) { copy.memory = .unavailable(off) }
+        if !modules.contains(.network) { copy.network = .unavailable(off) }
+        if !modules.contains(.processes) { copy.processes = .unavailable(off) }
+        if !modules.contains(.gpu) { copy.gpu = .unavailable(off) }
+        if !modules.contains(.power) { copy.power = .unavailable(off) }
+        return copy
+    }
 }
 
 extension Snapshot {

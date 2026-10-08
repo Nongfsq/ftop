@@ -2,7 +2,7 @@ import AppKit
 
 /// The small picture inside a badge. Each reading has one, and it is the same picture at every window size.
 public enum Glyph: Hashable, Sendable {
-    case cpu, gpu, memory, temperature, download, upload, adapter, machine
+    case cpu, gpu, memory, temperature, download, upload, adapter, machine, power
     /// A process that belongs to no app.
     case process
 
@@ -16,6 +16,7 @@ public enum Glyph: Hashable, Sendable {
         case .upload: "arrow.up"
         case .adapter: "powerplug"
         case .machine: "laptopcomputer"
+        case .power: "bolt.fill"
         case .cpu, .memory, .temperature, .process: nil
         }
     }
@@ -50,21 +51,38 @@ enum GlyphArt {
         }
     }
 
-    private static func drawSymbol(_ glyph: Glyph, in rect: CGRect, color: CGColor, context: CGContext) {
-        let key = Key(glyph: glyph, size: (rect.width * 4).rounded() / 4)
+    /// How wide the ink of `glyph` is when drawn in a box `side` wide, where a figure
+    /// beside it is spaced from the ink and not from the box.
+    static func inkWidth(_ glyph: Glyph, side: CGFloat) -> CGFloat {
+        if glyph.symbol != nil { return symbolMask(glyph, side: side)?.size.width ?? side }
+        // The drawn glyphs' strokes end past the 12 units their paths span.
+        let unit = side / PanelStyle.glyphExtent
+        switch glyph {
+        case .cpu: return (12 + PanelStyle.glyphLine) * unit
+        case .memory: return (11 + PanelStyle.glyphLine) * unit
+        default: return side
+        }
+    }
+
+    private static func symbolMask(_ glyph: Glyph, side: CGFloat) -> (image: CGImage, size: CGSize)? {
+        let key = Key(glyph: glyph, size: (side * 4).rounded() / 4)
         if masks[key] == nil, let name = glyph.symbol {
-            let configuration = NSImage.SymbolConfiguration(pointSize: rect.width, weight: .semibold)
-            guard let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(configuration) else { return }
+            let configuration = NSImage.SymbolConfiguration(pointSize: side, weight: .semibold)
+            guard let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(configuration) else { return nil }
             // Rendered large enough for any screen the panel is on.
             var proposed = CGRect(origin: .zero, size: CGSize(width: image.size.width * 4, height: image.size.height * 4))
-            guard let whole = image.cgImage(forProposedRect: &proposed, context: nil, hints: nil), let inked = trimmed(whole) else { return }
+            guard let whole = image.cgImage(forProposedRect: &proposed, context: nil, hints: nil), let inked = trimmed(whole) else { return nil }
             // Symbols come with different margins and proportions; each is cut to its ink
             // and fitted so its longer side is the box's.
-            let fit = rect.width / CGFloat(max(inked.width, inked.height))
+            let fit = side / CGFloat(max(inked.width, inked.height))
             if masks.count > 200 { masks.removeAll() }
             masks[key] = (inked, CGSize(width: CGFloat(inked.width) * fit, height: CGFloat(inked.height) * fit))
         }
-        guard let mask = masks[key] else { return }
+        return masks[key]
+    }
+
+    private static func drawSymbol(_ glyph: Glyph, in rect: CGRect, color: CGColor, context: CGContext) {
+        guard let mask = symbolMask(glyph, side: rect.width) else { return }
         let box = CGRect(x: rect.midX - mask.size.width / 2, y: rect.midY - mask.size.height / 2, width: mask.size.width, height: mask.size.height)
         context.saveGState()
         // Images are drawn bottom-up; the context is top-down.
