@@ -112,6 +112,17 @@ public struct PanelStyle: Equatable, Sendable {
     /// An app's icon fills this share of its badge, inside the arc.
     static let badgeIconShare: CGFloat = 0.68
 
+    // The menu bar item: a glyph and its figure, in the system's own typeface so it sits with its neighbors.
+    /// The longer side of the glyph. At 12 the drawn glyphs' grid is one point a unit.
+    static let menuBarGlyph: CGFloat = 12
+    /// From the glyph's ink to the figure.
+    static let menuBarGap: CGFloat = 3.5
+    static let menuBarPadding: CGFloat = 7
+    static let menuBarNumberSize: CGFloat = 12
+    static let menuBarUnitSize: CGFloat = 10
+    static let menuBarUnitGap: CGFloat = 0.5
+    static let menuBarUnitOpacity: CGFloat = 0.62
+
     // The control block: the settings as round switches.
     static let controlDisc: CGFloat = 30
     static let controlGlyph: CGFloat = 15

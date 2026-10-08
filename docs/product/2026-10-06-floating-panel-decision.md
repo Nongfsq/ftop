@@ -352,6 +352,42 @@ Each move was fine; all of them together looked hurried.
 
 The rule is `SteadyRanking` in `Sources/FtopCore/ProcessRanking.swift`.
 
+## The menu bar item: one reading, a glyph and its number (2026-10-08, approved and built)
+
+Approved by the owner on the boards "菜单栏显示哪一项" ("我可以选 A") and "菜单栏 · 图标与数字"
+("画法一挺好的"), with two corrections: no Chinese in the menu bar, and the network as one
+direction only so the item stays short. This replaces "Menu bar: the text "CPU 19%" and
+nothing else" and "The menu bar still shows only CPU" above.
+
+- The menu bar shows one reading, chosen by the user: processor, memory, GPU, download,
+  upload, or whole-machine power. Processes are not offered. The default is the
+  processor. It is `menuBarShows` in the settings file.
+- The choice is one row under "More" in the control block, picked from a system menu.
+  The closed block is unchanged. The row is dimmed and inert while the menu bar item is
+  off. Not chosen: a row of five discs in the block (the same glyphs twice, one row for
+  the panel and one for the menu bar, with nothing to tell them apart).
+- The item is the reading's glyph and its number, no word: the glyph is the name, so
+  there is no language in it. The glyphs are the panel's, in one color that follows the
+  menu bar. The unit is smaller and lighter than the number, as in the panel.
+- Not chosen: the number inside the glyph (7 pt digits, and "100" does not fit), a
+  translucent number over the glyph, the panel's ring badge (its glyph is 8 pt there),
+  a ring with no number.
+- Alignment (owner: "this is very important"). The item is drawn as one picture,
+  `Sources/FtopUI/MenuBarPicture.swift`, not laid out by the button. The glyph's middle
+  and the middle of the digits' height are the same line. The figure starts a fixed
+  distance after the glyph's ink, not after its box, so a narrow arrow and the wide chip
+  are spaced alike. The glyph sits on whole pixels.
+- Width (owner, on the first build: "a large empty area on the right; what about two
+  digits?"). The first build kept room for the widest figure, "100%", so every two-digit
+  figure left a hole. Now the item is as wide as its figure. It grows at once when a
+  wider figure comes and narrows only after no figure that wide has come for a minute,
+  so the items beside it move rarely. Inside that room the glyph and the number are one
+  group in the middle, so what a shorter figure leaves is the same on both sides and at
+  most half a digit a side in the usual case. Rates and watts have one decimal below
+  100 and none above, so no figure has more than four characters.
+- The reading does not have to be one the panel shows. A reading the machine does not
+  give is a dash.
+
 ## Rejected by the owner (do not reintroduce)
 
 - A processor figure larger than the figures beside it (2026-10-08): the core columns

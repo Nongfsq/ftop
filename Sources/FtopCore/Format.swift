@@ -25,6 +25,29 @@ public enum Format {
         return Quantity(number: String(Int((value / 1000).rounded())), unit: "KB/s", shortUnit: "K")
     }
 
+    /// A share as whole percent, for the menu bar: "18" and "%".
+    public static func share(_ fraction: Double) -> Quantity {
+        Quantity(number: percent(min(max(fraction, 0), 1)), unit: "%", shortUnit: "%")
+    }
+
+    /// A rate in at most four characters and one letter, for the menu bar: "84" K, "1.2" M, "120" M.
+    public static func compactRate(_ bytesPerSecond: Double) -> Quantity {
+        let value = max(0, bytesPerSecond)
+        if value >= 999_500_000 { return Quantity(number: compact(value / 1_000_000_000), unit: "GB/s", shortUnit: "G") }
+        if value >= 999_500 { return Quantity(number: compact(value / 1_000_000), unit: "MB/s", shortUnit: "M") }
+        return Quantity(number: String(Int((value / 1000).rounded())), unit: "KB/s", shortUnit: "K")
+    }
+
+    /// Watts for the menu bar: "18.6" W, "120" W.
+    public static func compactWatts(_ watts: Double) -> Quantity {
+        Quantity(number: compact(max(0, watts)), unit: "W", shortUnit: "W")
+    }
+
+    /// One decimal below 100, none from there on.
+    private static func compact(_ value: Double) -> String {
+        value < 99.95 ? decimal(value) : String(Int(value.rounded()))
+    }
+
     /// Memory in binary gigabytes with one decimal, as Activity Monitor shows it.
     public static func gigabytes(_ bytes: UInt64) -> String {
         decimal(Double(bytes) / 1_073_741_824)

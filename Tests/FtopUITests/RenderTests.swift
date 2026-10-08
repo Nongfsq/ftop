@@ -268,4 +268,45 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
         }
         Strings.language = .auto
     }
+
+    /// The menu bar item for every reading, on a light and a dark bar, at the screen's pixels.
+    @Test(.enabled(if: renderDirectory != nil))
+    func writeMenuBarImages() throws {
+        let directory = URL(fileURLWithPath: renderDirectory!)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let scale = CGFloat(renderScale ?? 2)
+        let height: CGFloat = 24
+        let figures: [(MenuBarMetric, Format.Quantity?)] = [
+            (.cpu, Format.share(0.18)), (.cpu, Format.share(1)), (.cpu, Format.share(0.07)), (.memory, Format.share(0.62)), (.gpu, Format.share(0.23)),
+            (.download, Format.compactRate(1_200_000)), (.upload, Format.compactRate(84_000)), (.power, Format.compactWatts(18.6)), (.gpu, nil),
+        ]
+        // Each figure with exactly its own room, then a short one in the room a longer one left behind.
+        var items = figures.map { ($0.0, $0.1, MenuBarPicture.figureWidth($0.1)) }
+        items.append((.cpu, Format.share(0.07), MenuBarPicture.figureWidth(Format.share(0.18))))
+        items.append((.cpu, Format.share(0.18), MenuBarPicture.figureWidth(Format.share(1))))
+        let gap: CGFloat = 16
+        let width = items.reduce(gap) { $0 + MenuBarPicture.width(of: $1.0, room: $1.2) + gap }
+        let context = try #require(
+            CGContext(
+                data: nil, width: Int(width * scale), height: Int(height * 2 * scale), bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue))
+        context.scaleBy(x: scale, y: scale)
+        for (row, dark) in [true, false].enumerated() {
+            context.setFillColor(CGColor(gray: dark ? 0.14 : 0.93, alpha: 1))
+            context.fill(CGRect(x: 0, y: CGFloat(row) * height, width: width, height: height))
+            var x = gap
+            for (metric, figure, room) in items {
+                let ink = CGColor(gray: dark ? 1 : 0, alpha: dark ? 1 : 0.85)
+                let item = CGRect(x: x, y: CGFloat(row) * height, width: MenuBarPicture.width(of: metric, room: room), height: height)
+                // The item's own area, as the highlight on a click shows it.
+                context.setFillColor(CGColor(gray: dark ? 1 : 0, alpha: 0.08))
+                context.fill(item.insetBy(dx: 0, dy: 2))
+                let picture = try #require(MenuBarPicture.picture(metric, figure: figure, room: room, height: height, scale: scale, color: ink))
+                context.draw(picture, in: item)
+                x += item.width + gap
+            }
+        }
+        let image = try #require(context.makeImage())
+        try NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])!.write(to: directory.appending(path: "menubar.png"))
+    }
 }

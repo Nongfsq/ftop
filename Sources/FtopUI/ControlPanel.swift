@@ -44,10 +44,7 @@ public final class ControlPanel: NSObject {
         let glass = NSVisualEffectView()
         glass.material = .menu
         glass.state = .active
-        glass.wantsLayer = true
-        glass.layer?.cornerRadius = PanelStyle.controlCorner
-        glass.layer?.cornerCurve = .continuous
-        glass.layer?.masksToBounds = true
+        glass.maskImage = Self.mask(radius: PanelStyle.controlCorner)
         face.autoresizingMask = [.width, .height]
         glass.addSubview(face)
         window.contentView = glass
@@ -66,6 +63,22 @@ public final class ControlPanel: NSObject {
             case .update: onUpdate?()
             }
         }
+    }
+
+    /// A rounded rectangle that stretches to any size. The material is cut with this and
+    /// not with the layer's corners: the blur of what is behind the window is drawn by the
+    /// system outside the layer, so rounding the layer leaves the window's square corners
+    /// filled and its shadow square.
+    private static func mask(radius: CGFloat) -> NSImage {
+        let side = radius * 2 + 1
+        let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+            return true
+        }
+        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
+        image.resizingMode = .stretch
+        return image
     }
 
     public var isShown: Bool { window.isVisible }
@@ -120,6 +133,7 @@ public final class ControlPanel: NSObject {
         }
         if frame != window.frame { window.setFrame(frame, display: true) }
         face.frame = NSRect(origin: .zero, size: size)
+        window.invalidateShadow()
     }
 
     /// A click anywhere else, or Escape, puts the block away.
@@ -164,6 +178,17 @@ public final class ControlPanel: NSObject {
         }
     }
 
+    public static func name(of metric: MenuBarMetric) -> String {
+        switch metric {
+        case .cpu: "CPU"
+        case .memory: Strings.pick("Memory", "内存")
+        case .gpu: "GPU"
+        case .download: Strings.pick("Download", "下载")
+        case .upload: Strings.pick("Upload", "上传")
+        case .power: Strings.pick("Power", "功耗")
+        }
+    }
+
     /// The block's contents on their own, for the reference pictures.
     public static func picture(_ state: State, expanded: Bool) -> NSView {
         let face = ControlFace(state: state)
@@ -196,7 +221,7 @@ final class ControlFace: NSView {
 
     private enum Item: Hashable {
         case module(ModuleID), floating, menuBar, motion, panel, quit, palette(PaletteID), more
-        case interval, rows, language, updates, file
+        case shows, interval, rows, language, updates, file
     }
 
     private final class Disc {
@@ -265,7 +290,7 @@ final class ControlFace: NSView {
         ]
     }
 
-    private static let listed: [Item] = [.interval, .rows, .language, .updates, .file]
+    private static let listed: [Item] = [.shows, .interval, .rows, .language, .updates, .file]
 
     override var fittingSize: NSSize {
         let width = PanelStyle.controlPadding * 2 + PanelStyle.controlPitchX * 4 + PanelStyle.controlDisc
@@ -320,6 +345,7 @@ final class ControlFace: NSView {
         case .quit: Strings.pick("Quit", "退出")
         case .palette(let palette): palette.displayName
         case .more: Strings.pick("More", "更多")
+        case .shows: Strings.pick("Menu bar shows", "菜单栏显示")
         case .interval: Strings.pick("Update every", "刷新间隔")
         case .rows: Strings.pick("Process rows, up to", "进程行数上限")
         case .language: Strings.pick("Language", "语言")
@@ -367,6 +393,7 @@ final class ControlFace: NSView {
 
     private func value(_ item: Item) -> String {
         switch item {
+        case .shows: ControlPanel.name(of: config.menuBarShows) + "  ›"
         case .interval: Self.seconds(config.interval) + "  ›"
         case .rows: "\(config.maxProcesses)  ›"
         case .language: Self.name(of: config.language) + "  ›"
@@ -563,7 +590,13 @@ final class ControlFace: NSView {
                 if case .palette(let palette) = entry.item { strong = palette == config.palette || over }
                 entry.label.foregroundColor = (strong ? PanelStyle.inkColor : PanelStyle.secondaryColor).cgColor
             }
-            for row in rows { row.highlight.opacity = hovered == row.item ? 1 : 0 }
+            for row in rows {
+                // What the menu bar shows has no effect while the menu bar item is off.
+                let idle = row.item == .shows && !config.menuBar
+                row.highlight.opacity = hovered == row.item && !idle ? 1 : 0
+                row.title.opacity = idle ? PanelStyle.controlDimOpacity : 1
+                row.value.opacity = idle ? PanelStyle.controlDimOpacity : 1
+            }
         }
         CATransaction.commit()
     }
@@ -650,6 +683,7 @@ final class ControlFace: NSView {
             build()
             onResize?()
         case .file: onAction?(.openFile)
+        case .shows: if config.menuBar { choose(item) }
         case .interval, .rows, .language, .updates: choose(item)
         }
     }
@@ -704,6 +738,13 @@ final class ControlFace: NSView {
             menu.addItem(entry)
         }
         switch item {
+        case .shows:
+            for option in MenuBarMetric.allCases {
+                add(ControlPanel.name(of: option), checked: option == config.menuBarShows) {
+                    $0.menuBarShows = option
+                    return ("menuBarShows", "\"\(option.rawValue)\"")
+                }
+            }
         case .interval:
             for option in Self.intervals {
                 add(Self.seconds(option), checked: option == config.interval) {

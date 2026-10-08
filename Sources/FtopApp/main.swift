@@ -16,7 +16,7 @@ final class FloatingPanel: NSPanel {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
-    private enum SamplingMode { case off, usageOnly, full }
+    private enum SamplingMode { case off, menuBarOnly, full }
     /// Which edges stay put when the window snaps to its layout.
     private struct Anchor {
         var right: Bool
@@ -36,7 +36,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// True while the window is springing to its layout; nothing else may move it then.
     private var settling = false
     private let glide = FrameGlide()
-    private var statusText = ""
+    /// What the menu bar item shows now: the reading, and its figure once there is one.
+    private var statusMetric: MenuBarMetric?
+    private var statusFigure: Format.Quantity?
+    /// The width the item keeps for its figure, when a figure last needed all of it, and
+    /// the widest figure since. The item grows at once and narrows only after a figure
+    /// that wide has stayed away for `statusRoomHold`, so the items beside it rarely move.
+    private var statusRoom: CGFloat = 0
+    private var statusRoomUsed: TimeInterval = 0
+    private var statusRoomNeeded: CGFloat = 0
+    static let statusRoomHold: TimeInterval = 60
     private var statusTick = 0
 
     static let margin: CGFloat = 14
@@ -320,10 +329,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private var panelShowing: Bool { panel.isVisible && panel.occlusionState.contains(.visible) }
 
-    /// Reads everything while the panel can be seen, only CPU usage while just the menu
-    /// bar number shows, and nothing otherwise.
+    /// Reads everything while the panel can be seen, only the menu bar's reading while
+    /// just that shows, and nothing otherwise.
     private func updateSampling(restart: Bool = false) {
-        let wanted: SamplingMode = panelShowing ? .full : (statusItem != nil ? .usageOnly : .off)
+        let wanted: SamplingMode = panelShowing ? .full : (statusItem != nil ? .menuBarOnly : .off)
         guard wanted != samplingMode || restart else { return }
         samplingMode = wanted
         log.info(
@@ -333,15 +342,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             sampler.stop()
             return
         }
-        sampler.start(interval: model.config.interval, modules: model.config.shown, usageOnly: wanted == .usageOnly) { [weak self] snapshot in
+        // The menu bar's reading is read even when the panel does not show its module.
+        let forMenuBar = statusItem != nil ? [model.config.menuBarShows.module] : []
+        let modules = wanted == .full ? model.config.shown + forMenuBar.filter { !model.config.shown.contains($0) } : forMenuBar
+        sampler.start(interval: model.config.interval, modules: modules, usageOnly: wanted == .menuBarOnly) { [weak self] snapshot in
             Task { @MainActor in self?.ingest(snapshot) }
         }
     }
 
     private func ingest(_ snapshot: Snapshot) {
-        // A usage-only reading has no frequencies or processes; it is for the menu bar alone.
+        // A reading taken for the menu bar alone has no frequencies or processes.
         if samplingMode == .full {
-            if model.ingest(snapshot) {
+            if model.ingest(snapshot.limited(to: model.config.shown)) {
                 saveMachineShape()
                 relayout()
             } else {
@@ -351,35 +363,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // The menu bar redraws through the system's status item machinery, which costs
         // more than drawing the whole panel; every other sample is enough for one number.
         statusTick += 1
-        if statusTick % 2 == 0, let cpu = snapshot.cpu.value { setStatusText(Format.percent(cpu.usage) + "%") }
+        if statusTick % 2 == 0, let metric = statusMetric { setStatusFigure(metric.figure(in: snapshot), isReading: true) }
     }
 
     // MARK: Menu bar
 
     private func updateStatusItem() {
-        if model.config.menuBar, statusItem == nil {
-            // "CPU" in front: a bare number in the menu bar says nothing about what it measures.
-            let font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
-            let width = ceil((Self.statusTitle("100%") as NSString).size(withAttributes: [.font: font]).width) + 14
-            let item = NSStatusBar.system.statusItem(withLength: width)
-            item.button?.font = font
-            item.button?.title = Self.statusTitle(statusText.isEmpty ? "–%" : statusText)
+        guard model.config.menuBar else {
+            if let item = statusItem { NSStatusBar.system.removeStatusItem(item) }
+            statusItem = nil
+            statusMetric = nil
+            return
+        }
+        if statusItem == nil {
+            let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+            item.button?.imagePosition = .imageOnly
             item.button?.target = self
             item.button?.action = #selector(statusItemClicked)
             item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
             statusItem = item
-        } else if !model.config.menuBar, let item = statusItem {
-            NSStatusBar.system.removeStatusItem(item)
-            statusItem = nil
         }
+        // A glyph says what the number measures. Another reading has another width and no figure yet.
+        let metric = model.config.menuBarShows
+        guard metric != statusMetric else { return }
+        statusMetric = metric
+        statusRoom = 0
+        setStatusFigure(nil, isReading: false)
     }
 
-    private static func statusTitle(_ percent: String) -> String { "CPU " + percent }
+    private func setStatusFigure(_ figure: Format.Quantity?, isReading: Bool) {
+        let needed = MenuBarPicture.figureWidth(figure)
+        let now = ProcessInfo.processInfo.systemUptime
+        var room = statusRoom
+        if needed >= room || !isReading {
+            // The dash before the first reading does not hold the width.
+            room = needed
+            statusRoomUsed = isReading ? now : -Self.statusRoomHold
+            statusRoomNeeded = 0
+        } else {
+            statusRoomNeeded = max(statusRoomNeeded, needed)
+            if now - statusRoomUsed > Self.statusRoomHold {
+                room = statusRoomNeeded
+                statusRoomUsed = now
+                statusRoomNeeded = 0
+            }
+        }
+        guard figure != statusFigure || room != statusRoom || statusItem?.button?.image == nil else { return }
+        statusFigure = figure
+        statusRoom = room
+        drawStatusItem()
+    }
 
-    private func setStatusText(_ text: String) {
-        guard text != statusText else { return }
-        statusText = text
-        statusItem?.button?.title = Self.statusTitle(text)
+    private func drawStatusItem() {
+        guard let metric = statusMetric, let button = statusItem?.button else { return }
+        let scale = NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
+        statusItem?.length = MenuBarPicture.width(of: metric, room: statusRoom)
+        button.image = MenuBarPicture.image(metric, figure: statusFigure, room: statusRoom, height: NSStatusBar.system.thickness, scale: scale)
+        button.setAccessibilityLabel(ControlPanel.name(of: metric) + " " + (statusFigure.map { $0.number + $0.shortUnit } ?? "–"))
     }
 
     @objc private func statusItemClicked() {
@@ -429,7 +469,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func apply(_ config: Config) {
-        let needsRestart = config.interval != model.config.interval || config.shown != model.config.shown
+        let old = model.config
+        let needsRestart =
+            config.interval != old.interval || config.shown != old.shown || config.menuBar != old.menuBar || config.menuBarShows != old.menuBarShows
         let layoutChanged = model.apply(config)
         applyFloating()
         updateStatusItem()

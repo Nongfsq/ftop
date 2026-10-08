@@ -376,8 +376,10 @@ Recorded 2026-10-06. Each item replaces the matching decision or amendment above
   with only the sixteen busiest processes. The panel still understands a version 1
   helper left in `/usr/local/libexec/ftop/` by an earlier `sudo ftop grant`, at a higher
   cost; `ftop doctor` says when that is the case.
-- While the panel is hidden or fully covered the sampler reads per-core usage only, for
-  the menu bar number; with the menu bar number off it stops.
+- While the panel is hidden or fully covered the sampler reads only the module the
+  menu bar item shows (per-core usage without frequencies when that is the processor);
+  with the menu bar item off it stops. Since 2026-10-08 that module is read even when
+  the panel does not show it, and the panel is given the readings without it.
 - Network: an interface's name is looked up once per index, not on every sample.
 - Performance, measured on an M4 Pro at 1 Hz with motion on, panel at 300×420: panel
   0.9–1.3% of one core and 22 MB, with the version 1 helper still installed (the panel

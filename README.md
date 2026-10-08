@@ -57,7 +57,7 @@ A reading the hardware does not give is shown as unavailable, never as zero.
   CPU, memory, and the helper processes inside the app. In a large window two badges
   switch the ranking between CPU and memory.
 - **Nearly free when you are not looking.** Hidden or fully covered, ftop stops reading
-  everything except the one number in the menu bar.
+  everything except the one reading in the menu bar.
 
 With *Reduce Motion* on in macOS, all of this becomes plain fades.
 
@@ -129,7 +129,9 @@ ftop doctor     # which readings are available on this Mac, and why not
 
 - Drag the panel to move it; drag an edge to resize it.
 - Move the pointer to the top edge for two buttons: pin (keep on top) and hide.
-- The menu bar shows `CPU 19%`. Click it to show or hide the panel.
+- The menu bar shows one reading, a glyph and its number: CPU by default, or memory,
+  GPU, download, upload, or power (under **More** in the settings). Click it to show
+  or hide the panel.
 - Hover over a core, the memory bar, or the GPU for detail; click a process for its card.
 - Right-click for the settings.
 
