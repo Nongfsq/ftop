@@ -95,6 +95,10 @@ func probe(json: Bool) {
         print("GPU \(Format.percent(gpu.usage))%, \(frequency), \(memory), \(temperature)")
     case .unavailable(let reason): print("GPU unavailable: \(reason)")
     }
+    switch snapshot.ane {
+    case .value(let ane): print("ANE \(Format.watts(ane.watts)) W")
+    case .unavailable(let reason): print("ANE unavailable: \(reason)")
+    }
     switch snapshot.power {
     case .value(let power):
         let input = power.inputWatts.value.map { Format.watts($0) + " W" } ?? "unavailable"
@@ -145,6 +149,7 @@ func doctor() {
     } else {
         line("power", false, snapshot.power.reason ?? "")
     }
+    line("ane power", snapshot.ane.value != nil, snapshot.ane.reason ?? "Neural Engine draw through IOReport, without admin rights")
     if let list = snapshot.processes.value {
         if list.helperOutdated {
             line(

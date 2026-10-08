@@ -279,13 +279,23 @@ final class GPUProvider {
                 temperature: temperature))
     }
 
-    /// Average GPU power since the previous call.
-    func watts(now: TimeInterval) -> Reading<Double> {
-        let joules = ftop_gpu_sampler_energy(sampler)
+    /// Average accelerator power since the previous call; one energy delta feeds both.
+    func powerReadings(now: TimeInterval) -> (gpu: Reading<Double>, ane: Reading<Double>) {
+        var gpuJoules = -1.0
+        var aneJoules = -1.0
+        let read = ftop_energy_read(sampler, &gpuJoules, &aneJoules)
         defer { energyTime = now }
-        guard joules >= 0 else { return .unavailable("IOReport returned no GPU energy") }
-        guard let energyTime, now > energyTime else { return .unavailable("waiting for a second sample") }
-        return .value(joules / (now - energyTime))
+        guard read == 0 else {
+            return (.unavailable("IOReport returned no energy sample"), .unavailable("IOReport returned no energy sample"))
+        }
+        guard let energyTime, now > energyTime else {
+            return (.unavailable("waiting for a second sample"), .unavailable("waiting for a second sample"))
+        }
+        let elapsed = now - energyTime
+        return (
+            gpuJoules >= 0 ? .value(gpuJoules / elapsed) : .unavailable("IOReport returned no GPU energy"),
+            aneJoules >= 0 ? .value(aneJoules / elapsed) : .unavailable("the energy model reports no ANE channel")
+        )
     }
 
     private static func readTemperature() -> Reading<Temperature> {

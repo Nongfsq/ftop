@@ -113,7 +113,7 @@ import Testing
         let model = Self.model(MachineShape(performance: 10, efficiency: 4), ModuleID.stacked + ModuleID.added)
         let unavailable = Snapshot(
             time: Date(), cpu: .unavailable("x"), memory: .unavailable("x"), network: .unavailable("x"), processes: .unavailable("x"),
-            gpu: .unavailable("x"), power: .unavailable("x"))
+            gpu: .unavailable("x"), power: .unavailable("x"), ane: .unavailable("x"))
         var busy = Snapshot.sample(performance: 10, efficiency: 4)
         busy.network = .value(NetworkSample(downBytesPerSecond: 999_400_000, upBytesPerSecond: 888_800_000))
         busy.gpu = .value(

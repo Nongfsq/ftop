@@ -1,13 +1,13 @@
 import Foundation
 
 public enum ModuleID: String, Sendable, Codable, CaseIterable {
-    case cpu, memory, network, processes, gpu, power
+    case cpu, memory, network, processes, gpu, power, ane
 
     /// Modules with a block of their own, stacked in the order the user lists them.
     public static let stacked: [ModuleID] = [.cpu, .memory, .network, .processes]
     /// Readings placed into the blocks of the stacked modules. A new one shows for
     /// everyone until it is listed under `hidden`.
-    public static let added: [ModuleID] = [.gpu, .power]
+    public static let added: [ModuleID] = [.gpu, .power, .ane]
 }
 
 public enum PaletteID: String, Sendable, Codable, CaseIterable {
@@ -78,7 +78,7 @@ public struct Config: Sendable, Codable, Equatable {
     }
 
     /// Modules a user can turn off, in the order the settings list them. CPU is always shown.
-    public static let optional: [ModuleID] = [.memory, .network, .gpu, .power, .processes]
+    public static let optional: [ModuleID] = [.memory, .network, .gpu, .power, .ane, .processes]
 
     /// Shows or hides one module and returns the `key: value` line of the settings file that changed.
     public mutating func setShown(_ module: ModuleID, _ on: Bool) -> (key: String, value: String) {
@@ -114,7 +114,8 @@ public struct Config: Sendable, Codable, Equatable {
           // Modules to show, top to bottom: "cpu", "memory", "network", "processes".
           modules: ["cpu", "memory", "network", "processes"],
 
-          // Readings to leave out: "gpu" (the GPU's ring and its figures), "power" (the whole machine's watts).
+          // Readings to leave out: "gpu" (the GPU's ring and its figures), "power" (the whole
+          // machine's watts), "ane" (the Neural Engine's watts).
           hidden: [],
 
           // Colors: "sea", "graphite", or "warm".

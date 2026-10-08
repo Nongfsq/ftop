@@ -60,6 +60,18 @@ public final class SystemSampler: @unchecked Sendable {
         // window also steadies the per-process CPU figures.
         if modules.contains(.processes), tick % 2 == 0 || lastProcesses.value == nil { lastProcesses = processes.sample(now: now) }
         tick += 1
+        // One energy delta feeds both accelerator watts; read it when either module shows.
+        let watts: (gpu: Reading<Double>, ane: Reading<Double>) = modules.contains(.power) || modules.contains(.ane)
+            ? gpu.powerReadings(now: now)
+            : (Reading<Double>.unavailable(off), Reading<Double>.unavailable(off))
+        let aneSample: Reading<ANESample>
+        if !modules.contains(.ane) {
+            aneSample = .unavailable(off)
+        } else if let aneWatts = watts.ane.value {
+            aneSample = .value(ANESample(watts: aneWatts))
+        } else {
+            aneSample = .unavailable(watts.ane.reason ?? "no ANE reading")
+        }
         return Snapshot(
             time: Date(),
             cpu: modules.contains(.cpu) ? cpu.sample(detail: !usageOnly) : .unavailable(off),
@@ -67,7 +79,8 @@ public final class SystemSampler: @unchecked Sendable {
             network: modules.contains(.network) ? network.sample(now: now) : .unavailable(off),
             processes: modules.contains(.processes) ? lastProcesses : .unavailable(off),
             gpu: modules.contains(.gpu) ? gpu.sample() : .unavailable(off),
-            power: modules.contains(.power) ? power.sample(gpuWatts: gpu.watts(now: now)) : .unavailable(off)
+            power: modules.contains(.power) ? power.sample(gpuWatts: watts.gpu) : .unavailable(off),
+            ane: aneSample
         )
     }
 }

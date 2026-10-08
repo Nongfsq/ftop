@@ -374,7 +374,7 @@ ftop_gpu_sampler *ftop_gpu_sampler_create(void) {
     if (copied) {
         s->energy_channels = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, copied);
         CFRelease(copied);
-        // The group has hundreds of channels; only the GPU's total is read each sample.
+        // The group has hundreds of channels; only the accelerators' totals are read each sample.
         CFTypeRef raw = CFDictionaryGetValue(s->energy_channels, CFSTR("IOReportChannels"));
         if (raw && CFGetTypeID(raw) == CFArrayGetTypeID()) {
             CFMutableArrayRef kept = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
@@ -382,7 +382,7 @@ ftop_gpu_sampler *ftop_gpu_sampler_create(void) {
                 CFDictionaryRef item = (CFDictionaryRef)CFArrayGetValueAtIndex((CFArrayRef)raw, i);
                 char name[64];
                 copy_string(IOReportChannelGetChannelName(item), name, sizeof(name));
-                if (strcmp(name, "GPU Energy") == 0) CFArrayAppendValue(kept, item);
+                if (strcmp(name, "GPU Energy") == 0 || strncmp(name, "ANE", 3) == 0) CFArrayAppendValue(kept, item);
             }
             if (CFArrayGetCount(kept) > 0) {
                 CFDictionarySetValue(s->energy_channels, CFSTR("IOReportChannels"), kept);
@@ -456,7 +456,9 @@ int ftop_gpu_sampler_update(ftop_gpu_sampler *s, ftop_gpu_freq *out) {
     return found;
 }
 
-double ftop_gpu_sampler_energy(ftop_gpu_sampler *s) {
+// One delta feeds both accelerators: the GPU has a single total channel, the Neural
+// Engine may have one per die ("ANE0", ...), so its figures are summed.
+int ftop_energy_read(ftop_gpu_sampler *s, double *gpu_joules, double *ane_joules) {
     if (!s || !s->energy_subscription) return -1;
     CFDictionaryRef current = IOReportCreateSamples(s->energy_subscription, s->energy_channels, NULL);
     if (!current) return -1;
@@ -465,18 +467,26 @@ double ftop_gpu_sampler_energy(ftop_gpu_sampler *s) {
     s->energy_previous = current;
     if (!delta) return -1;
 
-    double joules = -1;
+    if (gpu_joules) *gpu_joules = -1;
+    if (ane_joules) *ane_joules = -1;
     CFTypeRef raw = CFDictionaryGetValue(delta, CFSTR("IOReportChannels"));
-    if (raw && CFGetTypeID(raw) == CFArrayGetTypeID() && CFArrayGetCount((CFArrayRef)raw) > 0) {
-        CFDictionaryRef item = (CFDictionaryRef)CFArrayGetValueAtIndex((CFArrayRef)raw, 0);
-        char unit[16];
-        copy_string(IOReportChannelGetUnitLabel(item), unit, sizeof(unit));
-        double scale = strncmp(unit, "nJ", 2) == 0 ? 1e-9 : (strncmp(unit, "uJ", 2) == 0 ? 1e-6 : (strncmp(unit, "mJ", 2) == 0 ? 1e-3 : 0));
-        int64_t value = IOReportSimpleGetIntegerValue(item, 0);
-        if (scale > 0 && value >= 0) joules = (double)value * scale;
+    if (raw && CFGetTypeID(raw) == CFArrayGetTypeID()) {
+        CFArrayRef list = (CFArrayRef)raw;
+        for (CFIndex i = 0; i < CFArrayGetCount(list); i++) {
+            CFDictionaryRef item = (CFDictionaryRef)CFArrayGetValueAtIndex(list, i);
+            char unit[16], name[64];
+            copy_string(IOReportChannelGetUnitLabel(item), unit, sizeof(unit));
+            double scale = strncmp(unit, "nJ", 2) == 0 ? 1e-9 : (strncmp(unit, "uJ", 2) == 0 ? 1e-6 : (strncmp(unit, "mJ", 2) == 0 ? 1e-3 : 0));
+            int64_t value = IOReportSimpleGetIntegerValue(item, 0);
+            if (scale <= 0 || value < 0) continue;
+            copy_string(IOReportChannelGetChannelName(item), name, sizeof(name));
+            double joules = (double)value * scale;
+            if (gpu_joules && strcmp(name, "GPU Energy") == 0) *gpu_joules = joules;
+            if (ane_joules && strncmp(name, "ANE", 3) == 0) *ane_joules = (*ane_joules < 0 ? 0 : *ane_joules) + joules;
+        }
     }
     CFRelease(delta);
-    return joules;
+    return 0;
 }
 
 static double number_value(CFDictionaryRef dictionary, CFStringRef key) {

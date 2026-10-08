@@ -54,7 +54,7 @@ void ftop_gpu_sampler_destroy(ftop_gpu_sampler *sampler);
 // Fills `out` with the delta since the previous call. Returns 0, or -1 when no sample is available.
 int ftop_gpu_sampler_update(ftop_gpu_sampler *sampler, ftop_gpu_freq *out);
 // Joules the GPU used since the previous call, or -1.
-double ftop_gpu_sampler_energy(ftop_gpu_sampler *sampler);
+int ftop_energy_read(ftop_gpu_sampler *sampler, double *gpu_joules, double *ane_joules);
 
 typedef struct {
     double utilization;   // 0...1 as the graphics driver reports it, or -1

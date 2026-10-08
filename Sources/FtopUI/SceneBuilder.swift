@@ -161,9 +161,12 @@ public struct SceneBuilder {
     private var power: PowerSample? { snapshot?.power.value }
     private var showsGPU: Bool { modules.contains(.gpu) }
     private var showsPower: Bool { modules.contains(.power) }
+    private var ane: ANESample? { snapshot?.ane.value }
+    private var showsANE: Bool { modules.contains(.ane) }
     private var cpuHover: String { cpu.map { Strings.pick("CPU usage", "处理器总占用") + " \(Format.percent($0.usage))%" } ?? cpuReason }
     private var gpuHover: String { gpu.map { Strings.gpu($0, watts: power?.gpuWatts.value) } ?? snapshot?.gpu.reason ?? Strings.noReading }
     private var powerHover: String { power.map(Strings.power) ?? snapshot?.power.reason ?? Strings.noReading }
+    private var aneHover: String { ane.map(Strings.ane) ?? snapshot?.ane.reason ?? Strings.noReading }
     private var temperatureHover: String {
         let temperature = cpu?.temperature
         return temperature?.value.map(Strings.temperature) ?? temperature?.reason ?? cpuReason
@@ -326,7 +329,7 @@ public struct SceneBuilder {
     /// row's last column, which in a column layout is the side column the pairs below it
     /// use; `columns` fixes each figure to a column instead. Returns the row's height.
     private func cpuHeader(
-        _ scene: inout Scene, origin: CGPoint, width total: CGFloat, tail: CGFloat, gpu: Bool, place: TemperaturePlace, columns: Bool = false
+        _ scene: inout Scene, origin: CGPoint, width total: CGFloat, tail: CGFloat, gpu: Bool, ane: Bool = false, place: TemperaturePlace, columns: Bool = false
     ) -> CGFloat {
         let font = style.emphasis
         let middle = origin.y + style.badge / 2
@@ -339,18 +342,25 @@ public struct SceneBuilder {
             let x = beside ? room + style.points(12) : last
             scene.append(temperatureFigure(x: origin.x + x, middle: middle, font: font), at: .zero)
         }
-        if gpu {
-            // On the last column when the temperature sits by the processor; otherwise between the two.
-            let x = beside || place == .below ? last : columns ? last / 2 : room + (last - room * 2) / 2
-            let value = self.gpu.map { Format.percent($0.usage) } ?? "—"
-            scene.append(figure(.gpu, gpuDial, value, unit: "%", font: font, hover: gpuHover, x: origin.x + x, middle: middle), at: .zero)
+        // Added readings with no row of their own in this tier share the title row.
+        // They pack left to right (or onto the grid in a column layout), each taking
+        // the width cpuHeaderWidth reserved for it, so neighbours never overlap.
+        var extras: [(glyph: Glyph, dial: Dial, value: String, unit: String, width: CGFloat, hover: String)] = []
+        if gpu { extras.append((.gpu, gpuDial, self.gpu.map { Format.percent($0.usage) } ?? "—", "%", room, gpuHover)) }
+        if ane { extras.append((.ane, .disc(.gpu), self.ane.map { Format.watts($0.watts) } ?? "—", "W", figureWidth("88.8", unit: "W", font: font), aneHover)) }
+        var next = beside || place == .below ? last - CGFloat(max(0, extras.count - 1)) * (room + style.points(12)) : room + style.points(12)
+        for (index, extra) in extras.enumerated() {
+            let x = columns ? last * CGFloat(index + 1) / CGFloat(extras.count + 1) : next
+            next += extra.width + style.points(12)
+            scene.append(figure(extra.glyph, extra.dial, extra.value, unit: extra.unit, font: font, hover: extra.hover, x: origin.x + x, middle: middle), at: .zero)
         }
         return style.badge
     }
 
-    private func cpuHeaderWidth(tail: CGFloat, gpu: Bool) -> CGFloat {
+    private func cpuHeaderWidth(tail: CGFloat, gpu: Bool, ane: Bool = false) -> CGFloat {
         let room = figureWidth("100", unit: "%", font: style.emphasis) + style.points(12)
-        return room * (gpu ? 2 : 1) + tail
+        let watts = figureWidth("88.8", unit: "W", font: style.emphasis) + style.points(12)
+        return room * (gpu ? 2 : 1) + (ane ? watts : 0) + tail
     }
 
     private var temperatureRoom: CGFloat { figureWidth("100°", font: style.emphasis) }
@@ -360,11 +370,12 @@ public struct SceneBuilder {
         let kinds = machine.kinds
         let column = numbers ? style.coreNumberedWidth : style.coreSlimWidth
         let barsMinimum = CoreBarsGeometry.minimumWidth(kinds: kinds, column: column, gap: style.coreGap, groupGap: style.coreGroupGap)
-        // The compact layout has no pairs, so the GPU joins the title row.
+        // The compact layout has no pairs, so the GPU and the ANE join the title row.
         let gpuInHeader = showsGPU && compact
+        let aneInHeader = showsANE && compact
         let tail = max(side, temperatureRoom)
-        let total = fixedWidth ?? max(barsMinimum, cpuHeaderWidth(tail: tail, gpu: gpuInHeader))
-        let header = cpuHeader(&scene, origin: .zero, width: total, tail: tail, gpu: gpuInHeader, place: temperaturePlace(pairs: !compact))
+        let total = fixedWidth ?? max(barsMinimum, cpuHeaderWidth(tail: tail, gpu: gpuInHeader, ane: aneInHeader))
+        let header = cpuHeader(&scene, origin: .zero, width: total, tail: tail, gpu: gpuInHeader, ane: aneInHeader, place: temperaturePlace(pairs: !compact))
 
         let barsTop = header + style.innerGap
         let usageBaseline = style.points(5) + cap(style.coreNumber)
@@ -472,6 +483,11 @@ public struct SceneBuilder {
             // One pair for the GPU. Its watts and its own temperature are in the hover: on the
             // panel a second temperature a few degrees from the chip's only raised the question of which was which.
             rows.append((usage, memory))
+        }
+        if showsANE {
+            // Watts are all the Neural Engine reports; it rows alone, beside the GPU's pair.
+            let neural: Cell = (.ane, .disc(.gpu), ane.map { Format.watts($0.watts) } ?? "—", "W", "88.8", aneHover)
+            rows.append((neural, nil))
         }
         if showsPower {
             let system: Cell = (.machine, .disc(.secondary), power.map { Format.watts($0.systemWatts) } ?? "—", "W", "888.8", powerHover)
@@ -617,7 +633,7 @@ public struct SceneBuilder {
         case .processes: return processModule(width: width, count: candidate.processCount, roomy: roomy, wide: candidate.memoryList)
         // `.gpu` stands for the rows of every added reading; see `stack`.
         case .gpu: return detailRows(width: width) ?? Scene()
-        case .power: return Scene()
+        case .power, .ane: return Scene()
         }
     }
 
@@ -701,8 +717,8 @@ public struct SceneBuilder {
         let barsMinimum = CoreBarsGeometry.minimumWidth(
             kinds: machine.kinds, column: style.coreSlimWidth, gap: style.coreGap, groupGap: style.coreGroupGap)
         // The title row and the row under the memory bar share their columns, so the
-        // figures line up in threes (or twos): processor, GPU, temperature over download, upload, watts.
-        let top = modules.contains(.cpu) ? (showsGPU ? 3 : 2) : 0
+        // figures line up: processor, GPU, ANE, temperature over download, upload, watts.
+        let top = modules.contains(.cpu) ? 2 + (showsGPU ? 1 : 0) + (showsANE ? 1 : 0) : 0
         let bottom = (modules.contains(.network) ? 2 : 0) + (showsPower ? 1 : 0)
         let count = max(top, bottom, 2)
         let cell = max(figureWidth("100", unit: "%", font: style.emphasis), temperatureRoom, shortRateWidth, figureWidth("888.8W"))
@@ -711,7 +727,7 @@ public struct SceneBuilder {
         var y = padY
 
         if modules.contains(.cpu) {
-            let header = cpuHeader(&scene, origin: CGPoint(x: padX, y: y), width: total, tail: cell, gpu: showsGPU, place: .last, columns: true)
+            let header = cpuHeader(&scene, origin: CGPoint(x: padX, y: y), width: total, tail: cell, gpu: showsGPU, ane: showsANE, place: .last, columns: true)
             y += header + gap
             let rect = CGRect(x: padX, y: y, width: total, height: style.points(34) + extra.height)
             scene.append(bars(in: rect, mini: false), at: .zero)

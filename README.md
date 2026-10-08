@@ -37,6 +37,7 @@ The color says what it belongs to; there is almost no text to read.
 | **Network** | Current download and upload speed. |
 | **GPU** | Usage and memory in use. Hover for frequency, power, and temperature. |
 | **Power** | What the whole machine draws, in watts. |
+| **ANE** | What the Neural Engine draws, in watts — the one figure the hardware reports for it. |
 | **Temperature** | One figure, labeled with the sensor level it really comes from. |
 | **Processes** | The busiest apps with their own icons, helper processes folded into the app they belong to. |
 

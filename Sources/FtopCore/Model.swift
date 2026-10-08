@@ -134,6 +134,15 @@ public struct GPUSample: Sendable, Codable, Equatable {
     }
 }
 
+/// The Neural Engine: watts are the only figure the hardware reports for it.
+public struct ANESample: Sendable, Codable, Equatable {
+    public var watts: Double
+
+    public init(watts: Double) {
+        self.watts = watts
+    }
+}
+
 public struct PowerSample: Sendable, Codable, Equatable {
     /// What the whole machine draws, in watts.
     public var systemWatts: Double
@@ -290,10 +299,11 @@ public struct Snapshot: Sendable, Codable, Equatable {
     public var processes: Reading<ProcessList>
     public var gpu: Reading<GPUSample>
     public var power: Reading<PowerSample>
+    public var ane: Reading<ANESample>
 
     public init(
         time: Date, cpu: Reading<CPUSample>, memory: Reading<MemorySample>, network: Reading<NetworkSample>, processes: Reading<ProcessList>,
-        gpu: Reading<GPUSample>, power: Reading<PowerSample>
+        gpu: Reading<GPUSample>, power: Reading<PowerSample>, ane: Reading<ANESample>
     ) {
         self.time = time
         self.cpu = cpu
@@ -302,6 +312,7 @@ public struct Snapshot: Sendable, Codable, Equatable {
         self.processes = processes
         self.gpu = gpu
         self.power = power
+        self.ane = ane
     }
 }
 
@@ -366,7 +377,8 @@ extension Snapshot {
                 GPUSample(
                     usage: 0.37, frequencyMHz: .value(620), maxFrequencyMHz: 1578, memoryBytes: .value(gigabyte * 14 / 10),
                     temperature: .value(Temperature(celsius: 56, source: .gpu, sensorCount: 22)))),
-            power: .value(PowerSample(systemWatts: 18.6, inputWatts: .value(19.9), gpuWatts: .value(3.1)))
+            power: .value(PowerSample(systemWatts: 18.6, inputWatts: .value(19.9), gpuWatts: .value(3.1))),
+            ane: .value(ANESample(watts: 8.8))
         )
     }
 }

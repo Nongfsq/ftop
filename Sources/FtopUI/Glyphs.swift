@@ -2,7 +2,7 @@ import AppKit
 
 /// The small picture inside a badge. Each reading has one, and it is the same picture at every window size.
 public enum Glyph: Hashable, Sendable {
-    case cpu, gpu, memory, temperature, download, upload, adapter, machine
+    case cpu, gpu, memory, temperature, download, upload, adapter, machine, ane
     /// A process that belongs to no app.
     case process
 
@@ -12,6 +12,7 @@ public enum Glyph: Hashable, Sendable {
     var symbol: String? {
         switch self {
         case .gpu: "square.stack.3d.up"
+        case .ane: "brain"
         case .download: "arrow.down"
         case .upload: "arrow.up"
         case .adapter: "powerplug"

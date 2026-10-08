@@ -302,6 +302,11 @@ public enum Strings {
         return parts.joined(separator: " · ")
     }
 
+    static func ane(_ ane: ANESample) -> String {
+        [pick("Neural Engine", "神经网络引擎") + " \(Format.watts(ane.watts)) W",
+         pick("the one figure the hardware reports for it", "硬件仅此一项读数")].joined(separator: " · ")
+    }
+
     static func pressure(_ level: PressureLevel) -> String {
         switch level {
         case .normal: pick("Normal", "正常")

@@ -161,6 +161,7 @@ public final class ControlPanel: NSObject {
         case .processes: Strings.pick("Processes", "进程")
         case .gpu: "GPU"
         case .power: Strings.pick("Power", "功耗")
+        case .ane: "ANE"
         }
     }
 
@@ -332,6 +333,7 @@ final class ControlFace: NSView {
         switch item {
         case .module(.network): "arrow.up.arrow.down"
         case .module(.power): "bolt.fill"
+        case .module(.ane): "brain"
         case .module(.processes): "list.bullet"
         case .floating: "pin"
         case .menuBar: "menubar.rectangle"
