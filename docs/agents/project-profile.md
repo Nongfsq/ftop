@@ -43,6 +43,7 @@ verified: 2026-10-06 · owner rules: AGENTS.md · status tokens: off
 - license: MIT (source: LICENSE)
 - ci: none; do not add GitHub Actions without the owner asking (source: legacy AGENTS.md in the archive, user-stated)
 - deploy: `scripts/install.sh` into ~/Applications and ~/.local/bin; releases are a tag `v<version>` with `Ftop-<version>-arm64.zip` attached, ad-hoc signed and not notarized (source: scripts/install.sh, github.com/Nongfsq/ftop/releases)
+- homebrew: `brew install --cask nongfsq/tap/ftop`; the cask is `Casks/ftop.rb` in github.com/Nongfsq/homebrew-tap and installs the release archive into /Applications, linking `ftop`. After publishing a release, set `version` and `sha256` there (the archive's SHA-256 is the asset digest GitHub shows) and run `brew style --cask` on it. The cask clears the quarantine mark because the app is not notarized (source: github.com/Nongfsq/homebrew-tap, user-stated 2026-10-08)
 
 ## Skill applicability
 - frank-deploy, frank-github-actions-ci: not applicable — no CI or hosting (source: Delivery)
