@@ -168,6 +168,11 @@ sudo ftop grant
 ftop 最初是 [btop](https://github.com/aristocratos/btop) 的一个分支，之后从头重写，
 与它不共享任何代码。
 
+## 支持
+
+ftop 免费且开源。如果它在你的桌面上留了下来，可以
+[请我喝杯咖啡](https://buymeacoffee.com/frankmenger)。
+
 ## 许可证
 
 [MIT](LICENSE)

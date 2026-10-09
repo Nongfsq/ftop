@@ -181,6 +181,11 @@ Product decisions are in [docs/product/](docs/product/), the architecture in
 ftop began as a fork of [btop](https://github.com/aristocratos/btop) and was then
 rewritten from scratch; it shares no code with it.
 
+## Support
+
+ftop is free and open source. If it earns a place on your desktop, you can
+[buy me a coffee](https://buymeacoffee.com/frankmenger).
+
 ## License
 
 [MIT](LICENSE)
