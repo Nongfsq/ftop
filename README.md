@@ -181,6 +181,20 @@ Product decisions are in [docs/product/](docs/product/), the architecture in
 ftop began as a fork of [btop](https://github.com/aristocratos/btop) and was then
 rewritten from scratch; it shares no code with it.
 
+## Issues and contributions
+
+Report a problem or make a suggestion through the forms on the
+[issues page](https://github.com/Nongfsq/ftop/issues/new/choose); a report needs the
+output of `ftop doctor`. Pull requests from outside the project are not accepted. The
+rules are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Support
+
+ftop is free and open source. If it earns a place on your desktop, you can
+buy me a coffee.
+
+<a href="https://buymeacoffee.com/frankmenger"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="44"></a>
+
 ## License
 
 [MIT](LICENSE)

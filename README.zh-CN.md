@@ -168,6 +168,19 @@ sudo ftop grant
 ftop 最初是 [btop](https://github.com/aristocratos/btop) 的一个分支，之后从头重写，
 与它不共享任何代码。
 
+## 反馈与贡献
+
+报告问题或提建议，请用[议题页](https://github.com/Nongfsq/ftop/issues/new/choose)上的表单；
+报告问题需要附上 `ftop doctor` 的输出。项目不接受外部的 pull request。规则见
+[CONTRIBUTING.md](CONTRIBUTING.md)。
+
+## 支持
+
+ftop 免费且开源。如果它在你的桌面上留了下来，可以
+请我喝杯咖啡。
+
+<a href="https://buymeacoffee.com/frankmenger"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="44"></a>
+
 ## 许可证
 
 [MIT](LICENSE)

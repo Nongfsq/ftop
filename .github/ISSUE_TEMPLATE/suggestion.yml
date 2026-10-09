@@ -1,0 +1,30 @@
+name: Suggestion
+description: Something you would like ftop to show or do. Most suggestions are declined; read the rules first. English or 中文.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read [CONTRIBUTING.md](https://github.com/Nongfsq/ftop/blob/main/CONTRIBUTING.md) first.
+        ftop shows current state only, with as little text as possible, and stays small. Suggestions that work against that are closed.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you were trying to see or do
+      description: The situation, not the solution. What did you look at ftop for, and what was missing?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you suggest
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I read CONTRIBUTING.md, including what ftop will not do.
+          required: true
+        - label: I searched the open and closed issues and this was not suggested before.
+          required: true
