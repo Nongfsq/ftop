@@ -46,6 +46,19 @@
   docs/product/2026-10-06-floating-panel-decision.md; it owns the approved layout
   rules, and skipping it repeats options the owner already rejected.
 
+## Issues and pull requests from outside
+- CONTRIBUTING.md holds the rules; apply them the same way every time. Pull requests
+  are limited to collaborators in the repository settings; do not reopen that or merge
+  outside code without the owner asking.
+- Advertisements, invitations, and anything not about ftop: close as not planned and
+  lock as spam, then tell the owner, who deletes the issue and blocks the account.
+- Homebrew and other third-party packaging are declined; the README links only to
+  installs this project maintains.
+- A real report (a reading wrong or missing, with `ftop doctor` output) is answered,
+  even when the form was skipped: ask for what is missing instead of closing it.
+- Replies, closures, and anything posted under the owner's account still need the
+  owner's approval unless this section says otherwise.
+
 ## Validation
 - Run the profile's validation baseline before reporting a change complete, and
   report checks that were not run.
