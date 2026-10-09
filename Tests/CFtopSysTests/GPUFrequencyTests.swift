@@ -22,9 +22,8 @@ import Testing
         residencies.enumerated().map { (name: $0.offset == 0 ? "OFF" : "P\($0.offset)", residency: $0.element) }
     }
 
-    /// The table of the M6 Mac mini of issue 8: 13 values. The report shows the first three and the
-    /// last (502, 669, 834, 1735 MHz); the nine between are placeholders that only keep the order.
-    private static let m6Table: [Double] = [502, 669, 834, 920, 1010, 1100, 1190, 1280, 1370, 1460, 1550, 1640, 1735]
+    /// The table of the M6 Mac mini of issue 8, as `ftop doctor --states` of 0.2.4 printed it there.
+    private static let m6Table: [Double] = [502, 669, 834, 1002, 1090, 1178, 1266, 1354, 1442, 1530, 1620, 1680, 1735]
 
     /// GPUPH on that Mac, OFF then P1 to P15, from the reporter's two runs of `ftop doctor --states`.
     private static let m6Idle = states([14_985_837, 10_269_255] + Array(repeating: 0, count: 14))
@@ -50,6 +49,16 @@ import Testing
         #expect(abs(mhz - weighted / active) < 0.001)
         // 85% of the active time is in P13; whatever the values between, that alone puts it above this.
         #expect(mhz > 1548 && mhz <= 1735)
+        #expect(result.top == 1735)
+        #expect(result.uncovered == nil)
+    }
+
+    @Test func theM6SampleTakenOn024() throws {
+        // The reporter's run of 0.2.4 with a model inferring: never powered down, P7 to P13 only.
+        let sample = Self.states([0, 0, 0, 0, 0, 0, 0, 920_679, 936_217, 941_510, 589_609, 344_931, 311_119, 20_849_162, 0, 0])
+        let result = Self.frequency(sample, table: Self.m6Table)
+        let mhz = try #require(result.mhz)
+        #expect(abs(mhz - 1685.1) < 0.5)
         #expect(result.top == 1735)
         #expect(result.uncovered == nil)
     }
