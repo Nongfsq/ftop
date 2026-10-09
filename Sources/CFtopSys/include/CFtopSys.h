@@ -65,6 +65,10 @@ typedef struct {
     char uncovered_name[32];  // its name as IOReport gives it, e.g. "P14"; set by the sampler only
 } ftop_gpu_freq;
 
+// How many of the `values` a GPU node lists are its frequency table, given the number
+// of states the node declares (`perf-state-count`, the powered-down state included;
+// -1 when it has none). All of them when the count does not fit the values.
+int ftop_gpu_table_length(int values, int state_count);
 // Whether a state's name means the device was not running: "IDLE", "DOWN", "OFF".
 int ftop_state_is_idle(const char *name);
 // The frequency over an interval from the residency of each state and the frequency

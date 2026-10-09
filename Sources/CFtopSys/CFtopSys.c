@@ -713,8 +713,32 @@ struct ftop_gpu_sampler {
     CFDictionaryRef last; // the delta of the last update, kept for the diagnostics
     double mhz[MAX_STATES];
     int mhz_count;
+    int listed;         // values the node lists, over all its power domains
+    int declared;       // the node's perf-state-count, or -1
     char node[32]; // the registry node the frequency steps were read from
 };
+
+int ftop_gpu_table_length(int values, int state_count) {
+    // One of the declared states is the powered-down one; the values repeat once per power domain.
+    int steps = state_count - 1;
+    return steps >= 1 && steps <= values && values % steps == 0 ? steps : values;
+}
+
+// The GPU's frequency steps from its node, cut to the number of states the node declares.
+static void read_gpu_table(io_registry_entry_t entry, ftop_gpu_sampler *s) {
+    s->listed = read_frequencies(entry, CFSTR("perf-states"), s->mhz);
+    s->declared = -1;
+    CFTypeRef count = IORegistryEntryCreateCFProperty(entry, CFSTR("perf-state-count"), kCFAllocatorDefault, 0);
+    if (count) {
+        uint32_t raw = 0;
+        if (CFGetTypeID(count) == CFDataGetTypeID() && CFDataGetLength((CFDataRef)count) == sizeof(raw)) {
+            memcpy(&raw, CFDataGetBytePtr((CFDataRef)count), sizeof(raw));
+            if (raw <= MAX_STATES) s->declared = (int)raw;
+        }
+        CFRelease(count);
+    }
+    s->mhz_count = ftop_gpu_table_length(s->listed, s->declared);
+}
 
 // The registry entry the graphics driver is attached to, or 0.
 static io_registry_entry_t gpu_driver_node(void) {
@@ -737,7 +761,7 @@ ftop_gpu_sampler *ftop_gpu_sampler_create(void) {
         while ((entry = IOIteratorNext(iterator))) {
             io_name_t name = {0};
             if (s->mhz_count == 0 && IORegistryEntryGetName(entry, name) == KERN_SUCCESS && strcmp(name, "sgx") == 0) {
-                s->mhz_count = read_frequencies(entry, CFSTR("perf-states"), s->mhz);
+                read_gpu_table(entry, s);
                 if (s->mhz_count > 0) strlcpy(s->node, name, sizeof(s->node));
             }
             IOObjectRelease(entry);
@@ -749,7 +773,7 @@ ftop_gpu_sampler *ftop_gpu_sampler_create(void) {
         io_registry_entry_t node = gpu_driver_node();
         if (node) {
             io_name_t name = {0};
-            s->mhz_count = read_frequencies(node, CFSTR("perf-states"), s->mhz);
+            read_gpu_table(node, s);
             if (s->mhz_count > 0 && IORegistryEntryGetName(node, name) == KERN_SUCCESS) strlcpy(s->node, name, sizeof(s->node));
             IOObjectRelease(node);
         }
@@ -884,6 +908,12 @@ int ftop_gpu_sampler_describe(ftop_gpu_sampler *s, char *buffer, int capacity) {
             if (s->mhz[i] > high) high = s->mhz[i];
         }
         append(&out, " table %s perf-states %d values %.0f-%.0f MHz\n", s->node, s->mhz_count, low, high);
+        append(&out, " values in order, the n-th for the n-th active state:");
+        for (int i = 0; i < s->mhz_count; i++) append(&out, " %.0f", s->mhz[i]);
+        append(&out, "\n");
+        if (s->declared < 0) append(&out, " the node has no perf-state-count; all %d values it lists are kept\n", s->listed);
+        else if (s->mhz_count == s->declared - 1) append(&out, " the node declares %d states (perf-state-count): one powered down and these %d, of the %d values it lists\n", s->declared, s->mhz_count, s->listed);
+        else append(&out, " the node declares %d states (perf-state-count), which does not divide the %d values it lists; all are kept\n", s->declared, s->listed);
     } else {
         append(&out, " none found\n");
     }

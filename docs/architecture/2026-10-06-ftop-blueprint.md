@@ -451,6 +451,8 @@ Recorded 2026-10-06. Each item replaces the matching decision or amendment above
   an M6 lists P1 to P15 against 13 values). The n-th state runs at the n-th value; an
   interval that spent time in a state past the table's end has no frequency, and no
   frequency is worked out for such a state. The matching is `ftop_gpu_frequency`.
+  The table's length is the node's `perf-state-count` less the powered-down state
+  when that divides the values listed, else every value listed.
 - Revisit when: a chip has no `sgx` node, a chip runs in a state its table does not
   cover (frequency then shows as unavailable and names the state), or `PSTR` is missing.
 

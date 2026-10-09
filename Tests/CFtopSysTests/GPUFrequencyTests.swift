@@ -103,6 +103,19 @@ import Testing
         #expect(stateless.mhz == nil && stateless.top == nil && stateless.steps == 0)
     }
 
+    @Test func theNodeSaysHowLongItsTableIs() {
+        // An M4 Pro: 16 states declared, 30 values listed (two power domains of 15).
+        #expect(ftop_gpu_table_length(30, 16) == 15)
+        // The M6 of issue 8: 14 states declared, 13 values listed.
+        #expect(ftop_gpu_table_length(13, 14) == 13)
+        // No count, or one that does not fit the values: every value is kept, as before.
+        #expect(ftop_gpu_table_length(13, -1) == 13)
+        #expect(ftop_gpu_table_length(13, 5) == 13)
+        #expect(ftop_gpu_table_length(13, 20) == 13)
+        #expect(ftop_gpu_table_length(13, 1) == 13)
+        #expect(ftop_gpu_table_length(0, 14) == 0)
+    }
+
     @Test(arguments: ["OFF", "IDLE", "DOWN"]) func idleNames(name: String) {
         #expect(ftop_state_is_idle(name) != 0)
         #expect(ftop_state_is_idle("P1") == 0)
