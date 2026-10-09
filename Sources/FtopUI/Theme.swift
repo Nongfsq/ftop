@@ -83,6 +83,10 @@ public struct PanelStyle: Equatable, Sendable {
     var miniCoreWidth: CGFloat { points(3) }
     var miniCoreGap: CGFloat { points(1.5) }
     var miniCoreGroupGap: CGFloat { points(2) }
+    /// The GPU's column among mini columns: three of them wide, so it reads as another part.
+    var miniGPUWidth: CGFloat { points(9) }
+    /// Between the mini core columns and the GPU's mini column when they share one area.
+    var miniGPUGap: CGFloat { points(5.5) }
     /// Columns are capsules up to this corner radius; wider ones keep it instead of becoming half circles.
     var coreRadiusLimit: CGFloat { points(8) }
     /// An idle core still shows a dot this tall.

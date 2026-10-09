@@ -323,6 +323,18 @@ public struct SceneBuilder {
         return scene
     }
 
+    /// The GPU's one column in `rect`, with a hover over it. One column: the system reports
+    /// one figure for the whole GPU. Height is its usage; the line, where shown, its frequency.
+    private func gpuBar(in rect: CGRect, frequency: Bool, hoverHeight: CGFloat? = nil) -> Scene {
+        var scene = Scene()
+        let sample = CoreSample(
+            id: 0, group: 0, number: 1, usage: gpu?.usage ?? 0, frequencyMHz: gpu?.frequencyMHz ?? .unavailable(Strings.noReading),
+            maxFrequencyMHz: gpu?.maxFrequencyMHz)
+        scene.gpuBar = BarsItem(rect: rect, cores: [sample], showsFrequency: frequency, gap: style.coreGap, groupGap: style.coreGroupGap, paint: .gpu)
+        scene.hovers.append(HoverRegion(rect: CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: hoverHeight ?? rect.height), text: gpuHover))
+        return scene
+    }
+
     private var miniBarsWidth: CGFloat {
         CoreBarsGeometry.minimumWidth(groups: machine.layout, column: style.miniCoreWidth, gap: style.miniCoreGap, groupGap: style.miniCoreGroupGap)
     }
@@ -422,13 +434,10 @@ public struct SceneBuilder {
 
         var gpuRect: CGRect?
         if gpuColumn {
-            // One column: the system reports one figure for the whole GPU. Height is its usage, the line its frequency.
             let frame = CGRect(x: coresWidth + style.gpuColumnGap, y: barsTop, width: block, height: barsHeight)
-            let sample = CoreSample(
-                id: 0, group: 0, number: 1, usage: gpu?.usage ?? 0, frequencyMHz: gpu?.frequencyMHz ?? .unavailable(Strings.noReading),
-                maxFrequencyMHz: gpu?.maxFrequencyMHz)
-            scene.gpuBar = BarsItem(rect: frame, cores: [sample], showsFrequency: true, gap: style.coreGap, groupGap: style.coreGroupGap, paint: .gpu)
-            scene.hovers.append(HoverRegion(rect: CGRect(x: frame.minX, y: 0, width: block, height: frame.maxY + numbersHeight), text: gpuHover))
+            scene.append(gpuBar(in: frame, frequency: true, hoverHeight: barsHeight + numbersHeight), at: .zero)
+            // The figure above it speaks for the column too.
+            scene.hovers.append(HoverRegion(rect: CGRect(x: frame.minX, y: 0, width: block, height: barsTop), text: gpuHover))
             gpuRect = frame
         }
 
@@ -768,7 +777,78 @@ public struct SceneBuilder {
 
     // MARK: Corner
 
+    /// The corner with the GPU's column: the large panel's two lines in small. The left
+    /// edge carries the processor, the core columns, the memory bar and one figure a row;
+    /// the GPU's block, as wide as a figure, carries the GPU, its column, the swap capsule
+    /// and the other figure of each row.
+    private func cornerPairs(extra: CGSize) -> Scene {
+        var scene = Scene()
+        let padX = style.points(13)
+        let padY = style.points(11)
+        let gap = style.innerGap
+        let barsMinimum = CoreBarsGeometry.minimumWidth(
+            groups: machine.layout, column: style.coreSlimWidth, gap: style.coreGap, groupGap: style.coreGroupGap)
+        let cell = max(titleFigureRoom, temperatureRoom, shortRateWidth, figureWidth("888.8W"))
+        let coresWidth = max(barsMinimum, cell) + extra.width
+        let side = padX + coresWidth + style.gpuColumnGap
+        let total = coresWidth + style.gpuColumnGap + cell
+        var y = padY
+
+        let middle = y + style.badge / 2
+        let usage = cpu.map { Format.percent($0.usage) } ?? "—"
+        scene.append(figure(.cpu, cpuDial, usage, unit: "%", font: style.emphasis, hover: cpuHover, x: padX, middle: middle), at: .zero)
+        let value = gpu.map { Format.percent($0.usage) } ?? "—"
+        scene.append(figure(.gpu, gpuDial, value, unit: "%", font: style.emphasis, hover: gpuHover, x: side, middle: middle), at: .zero)
+        y += style.badge + gap
+        let height = style.points(34) + extra.height
+        scene.append(bars(in: CGRect(x: padX, y: y, width: coresWidth, height: height), mini: false), at: .zero)
+        scene.append(gpuBar(in: CGRect(x: side, y: y, width: cell, height: height), frequency: true), at: .zero)
+        y += height + gap
+
+        if modules.contains(.memory) {
+            let rect = CGRect(x: padX, y: y, width: coresWidth + style.gpuColumnGap - style.rowGap, height: style.points(5))
+            let swap = CGRect(x: side, y: y, width: cell, height: style.points(5))
+            if let memory {
+                let paint = PanelStyle.pressurePaint(memory.pressure.value ?? .normal)
+                scene.shapes.append(
+                    ShapeItem(
+                        rect: rect, paint: .track,
+                        kind: .meter(
+                            track: .track,
+                            segments: [.init(fraction: memory.appFraction, paint: paint), .init(fraction: memory.compressedFraction, paint: .faded(paint))],
+                            outline: nil)))
+                scene.shapes.append(
+                    ShapeItem(
+                        rect: swap, paint: .secondary,
+                        kind: .meter(track: nil, segments: [.init(fraction: memory.swapFraction, paint: .secondary)], outline: .faded(.secondary))))
+                scene.hovers.append(
+                    HoverRegion(rect: swap.insetBy(dx: 0, dy: -style.points(4)), text: Strings.swap + " \(Format.gigabytes(memory.swapUsed)) GB"))
+            }
+            scene.hovers.append(HoverRegion(rect: rect.insetBy(dx: 0, dy: -style.points(4)), text: memoryHover))
+            y = rect.maxY + gap
+        }
+
+        // The figures without columns, two a row: the rates, then what the machine draws and how hot the chip is.
+        var figures: [(CGFloat, CGFloat) -> Scene] = []
+        if modules.contains(.network) {
+            figures.append { self.shortRate(.download, \.downBytesPerSecond, x: $0, middle: $1) }
+            figures.append { self.shortRate(.upload, \.upBytesPerSecond, x: $0, middle: $1) }
+        }
+        if showsPower {
+            let watts = power.map { Format.watts($0.systemWatts) + "W" } ?? "—"
+            figures.append { self.figure(.machine, .disc(.secondary), watts, hover: self.powerHover, x: $0, middle: $1) }
+        }
+        figures.append { self.temperatureFigure(x: $0, middle: $1) }
+        for (index, make) in figures.enumerated() {
+            scene.append(make(index % 2 == 0 ? padX : side, y + style.badge / 2), at: .zero)
+            if index % 2 == 1 || index == figures.count - 1 { y += style.badge + gap }
+        }
+        scene.size = CGSize(width: total + padX * 2, height: y - gap + padY)
+        return scene
+    }
+
     private func corner(extra: CGSize) -> Scene {
+        if gpuColumn { return cornerPairs(extra: extra) }
         var scene = Scene()
         let padX = style.points(13)
         let padY = style.points(11)
@@ -843,15 +923,20 @@ public struct SceneBuilder {
             x = rect.maxX + gap
             scene.append(cpuFigure(x: x, middle: middle), at: .zero)
             x += figureWidth("100%") + gap
-            if rich {
-                scene.append(temperatureFigure(x: x, middle: middle), at: .zero)
-                x += figureWidth("100°") + gap
-            }
         }
         // The plain strip has no room for the GPU; it is the first figure to go.
+        // Where it is shown it reads as the processor does: its column, then its figure.
         if rich, showsGPU {
+            let rect = CGRect(x: x, y: middle - barsHeight / 2, width: style.miniGPUWidth, height: barsHeight)
+            scene.append(gpuBar(in: rect, frequency: false), at: .zero)
+            x = rect.maxX + gap
             scene.append(gpuFigure(x: x, middle: middle), at: .zero)
             x += figureWidth("100%") + gap
+        }
+        // A figure with no columns of its own comes after the two that have them.
+        if rich, modules.contains(.cpu) {
+            scene.append(temperatureFigure(x: x, middle: middle), at: .zero)
+            x += figureWidth("100°") + gap
         }
         if modules.contains(.memory) {
             let block = memoryFigure(full: rich, x: x, middle: middle)
@@ -890,7 +975,9 @@ public struct SceneBuilder {
         let padX = style.points(8)
         let padY = style.points(10)
         let gap = style.points(8)
-        let total = max(miniBarsWidth, shortRateWidth)
+        // The GPU's column stands at the right end of the column area, as tall as the cores.
+        let beside = gpuColumn ? style.miniGPUGap + style.miniGPUWidth : 0
+        let total = max(miniBarsWidth + beside, shortRateWidth)
         var y = padY
         func row(_ block: Scene) {
             scene.append(block, at: .zero)
@@ -899,13 +986,18 @@ public struct SceneBuilder {
 
         if modules.contains(.cpu) {
             // The columns come first, so the figures under them are one list with one rhythm.
-            let rect = CGRect(x: padX, y: y, width: total, height: style.points(48) + extra.height)
+            let rect = CGRect(x: padX, y: y, width: total - beside, height: style.points(48) + extra.height)
             scene.append(bars(in: rect, mini: true), at: .zero)
+            if gpuColumn {
+                let column = CGRect(x: rect.maxX + style.miniGPUGap, y: y, width: style.miniGPUWidth, height: rect.height)
+                scene.append(gpuBar(in: column, frequency: false), at: .zero)
+            }
             y = rect.maxY + gap
             row(cpuFigure(x: padX, middle: y + style.badge / 2))
-            row(temperatureFigure(x: padX, middle: y + style.badge / 2))
         }
+        // In the order of the columns above: the processor, then the GPU.
         if showsGPU { row(gpuFigure(x: padX, middle: y + style.badge / 2)) }
+        if modules.contains(.cpu) { row(temperatureFigure(x: padX, middle: y + style.badge / 2)) }
         if modules.contains(.memory) { row(memoryFigure(full: false, x: padX, middle: y + style.badge / 2).scene) }
         if modules.contains(.network) {
             row(shortRate(.download, \.downBytesPerSecond, x: padX, middle: y + style.badge / 2))

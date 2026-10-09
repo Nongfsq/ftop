@@ -482,9 +482,24 @@ and nothing else. The GPU is a ring" and the GPU's pair of usage and memory abov
   now its column. Chosen without the owner's word on it; to be confirmed.
 - In the detailed layout the GPU's column has its frequency under it and no second
   usage number.
-- Applies to the layouts with full-size columns (compact, full, detailed). The corner,
-  the strips, and the smallest layout are unchanged and still to be decided; with the
-  GPU off the title row is as before.
+- By size (owner, after dragging the first build: every size needs its own form, and
+  each must line up; drawn on the same page, built the same day, not yet seen on the
+  real panel):
+  - Smallest: unchanged, three rings. It has no columns.
+  - Plain strip: unchanged, no GPU; it is the first figure to go.
+  - Rich strip: the GPU reads as the processor does, its column and then its figure.
+    The column is a mini column three times as wide, level with the mini cores. The
+    order is processor, GPU, temperature: the two with columns first.
+  - Vertical strip: the GPU's mini column at the right end of the column area, as
+    tall as the cores; the list under it is processor, GPU, temperature, and on.
+  - Corner: the large panel's two lines in small. The GPU's block is as wide as a
+    figure and carries the GPU, its column, the swap capsule, upload, and the
+    temperature; the left edge carries the processor, the cores, the memory bar,
+    download, and the machine's watts. This replaces the corner's three columns
+    (processor, GPU, temperature over download, upload, watts), whose middle column
+    matched no core column. One row taller.
+  - Compact, full, detailed: the wide column described above.
+- With the GPU off, every layout is as before, the title row included.
 - Cost: sizes changed. The compact layout's second column is wider (the memory row now
   holds the temperature); the detailed layout is wider by the GPU's column.
 

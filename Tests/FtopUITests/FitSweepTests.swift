@@ -232,4 +232,47 @@ import Testing
             }
         }
     }
+
+    /// In the small layouts the GPU's column is as tall as the core columns and level with
+    /// them; in the corner its figure starts where it does, as in the large layouts.
+    @Test func theGPUColumnInTheSmallLayouts() {
+        for machine in Self.machines + [MachineShape(groups: [5, 5, 4])] {
+            let model = Self.model(machine, ModuleID.stacked + ModuleID.added)
+            let candidates = [
+                LayoutCandidate(tier: .corner), LayoutCandidate(tier: .strip, strip: .rich), LayoutCandidate(tier: .strip, strip: .vertical),
+            ]
+            for candidate in candidates {
+                let scene = Self.scene(model, LayoutChoice(candidate: candidate, scale: 1, extraWidth: 20, extraHeight: 20), snapshot: model.snapshot)
+                let label = "\(machine.groups) \(candidate.tier) \(String(describing: candidate.strip))"
+                Self.expectWellFormed(scene, label)
+                guard let bars = scene.bars, let bar = scene.gpuBar else {
+                    Issue.record("\(label): no GPU column")
+                    continue
+                }
+                #expect(bar.rect.minY == bars.rect.minY, "\(label)")
+                #expect(bar.rect.height == bars.rect.height, "\(label)")
+                #expect(bar.rect.minX > bars.rect.maxX, "\(label)")
+                let badge = scene.shapes.first {
+                    if case .badge(.gpu, _) = $0.kind { return true }
+                    return false
+                }
+                if candidate.tier == .corner {
+                    #expect(abs((badge?.rect.minX ?? -1) - bar.rect.minX) < 0.01, "\(label): the GPU's badge starts where its column does")
+                    // Every badge is on one of two lines: the left edge, or the GPU column's.
+                    for shape in scene.shapes {
+                        guard case .badge = shape.kind else { continue }
+                        #expect(
+                            abs(shape.rect.minX - bars.rect.minX) < 0.01 || abs(shape.rect.minX - bar.rect.minX) < 0.01, "\(label): a badge off the two lines")
+                    }
+                } else if candidate.strip == .rich {
+                    // The column, then its figure.
+                    #expect((badge?.rect.minX ?? 0) > bar.rect.maxX, "\(label)")
+                }
+            }
+            // The plain strip and the smallest layout have no GPU column.
+            for candidate in [LayoutCandidate(tier: .strip, strip: .plain), LayoutCandidate(tier: .micro)] {
+                #expect(Self.scene(model, LayoutChoice(candidate: candidate, scale: 1), snapshot: model.snapshot).gpuBar == nil)
+            }
+        }
+    }
 }
