@@ -140,7 +140,7 @@ final class CoreBarsView: NSView {
         let old = self.item
         let structureChanged =
             old == nil || old!.cores.map(\.group) != item.cores.map(\.group) || old!.rect.size != item.rect.size || old!.gap != item.gap
-            || old!.groupGap != item.groupGap || old!.showsFrequency != item.showsFrequency || style.scale != self.style.scale
+            || old!.groupGap != item.groupGap || old!.showsFrequency != item.showsFrequency || old!.paint != item.paint || style.scale != self.style.scale
         let paletteChanged = style.palette != self.style.palette
         self.item = item
         self.style = style
@@ -227,7 +227,7 @@ final class CoreBarsView: NSView {
             withoutAnimation {
                 let count = (item.cores.map(\.group).max() ?? 0) + 1
                 for (index, column) in columns.enumerated() {
-                    let paint = Paint.core(group: item.cores[index].group, of: count)
+                    let paint = item.paint ?? Paint.core(group: item.cores[index].group, of: count)
                     column.track.backgroundColor = PanelStyle.coreTrackColor.cgColor
                     column.fill.backgroundColor = style.color(paint).cgColor
                     column.tick.backgroundColor = style.color(.ink).withAlphaComponent(0.8).cgColor
