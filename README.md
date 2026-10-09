@@ -35,7 +35,7 @@ The color says what it belongs to; there is almost no text to read.
 | **Cores** | One column per core, one group per kind of core the chip has, fastest first. The fill is usage; the tick is that core's current frequency. |
 | **Memory** | Used and total, compressed, swap, and the system's own pressure level. |
 | **Network** | Current download and upload speed. |
-| **GPU** | Usage and memory in use. Hover for frequency, power, and temperature. |
+| **GPU** | A column of its own beside the cores, read the same way: the fill is usage, the tick is its current frequency. Memory in use and its watts sit below. Hover for its temperature. |
 | **Power** | What the whole machine draws, in watts. |
 | **Temperature** | One figure, labeled with the sensor level it really comes from. |
 | **Processes** | The busiest apps with their own icons, helper processes folded into the app they belong to. An app's CPU is a share of the whole machine, the same unit as the total above it, so it never passes 100% (Activity Monitor counts one core as 100%). |
