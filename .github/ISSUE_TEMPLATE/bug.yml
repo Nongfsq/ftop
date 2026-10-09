@@ -1,0 +1,46 @@
+name: Something is wrong
+description: A reading is missing or wrong, or the panel misbehaves. English or 中文.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read [CONTRIBUTING.md](https://github.com/Nongfsq/ftop/blob/main/CONTRIBUTING.md) first.
+        An issue without the output of `ftop doctor` is closed without a reply.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw and what you expected instead. A screenshot of the panel helps.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ftop version
+      description: The output of `ftop version`. Update to the latest release before reporting.
+    validations:
+      required: true
+  - type: input
+    id: mac
+    attributes:
+      label: Mac and macOS
+      description: For example "Mac mini, M6, macOS 27.0".
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of ftop doctor
+      description: Run `ftop doctor` in a terminal and paste everything it prints. For a missing frequency, run `ftop doctor --states` instead.
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the open and closed issues and this is not a duplicate.
+          required: true
+        - label: This is about ftop itself, not an advertisement, an invitation, or a request to list ftop somewhere.
+          required: true
