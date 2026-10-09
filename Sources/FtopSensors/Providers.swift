@@ -276,8 +276,10 @@ final class GPUProvider {
                 frequency = .unavailable("no GPU frequency table (perf-states) was found in the registry")
             } else if raw.steps == 0 {
                 frequency = .unavailable("IOReport reports no active states for the GPU")
-            } else if top == nil {
-                frequency = .unavailable("the GPU's frequency table has \(raw.table_steps) values, fewer than the \(raw.steps) states IOReport reports")
+            } else if raw.uncovered_state >= 0 {
+                let name = withUnsafeBytes(of: raw.uncovered_name) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
+                frequency = .unavailable(
+                    "the GPU ran in \(name.isEmpty ? "a state" : name), which its frequency table of \(raw.table_steps) values does not cover")
             } else {
                 frequency = .unavailable("the GPU was powered down for the whole interval")
             }

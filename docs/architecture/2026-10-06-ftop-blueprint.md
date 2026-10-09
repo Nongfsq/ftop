@@ -447,8 +447,14 @@ Recorded 2026-10-06. Each item replaces the matching decision or amendment above
   the second do not say which sensors are the GPU's); `powermetrics` (needs root);
   the CPU's share of power (IOReport returns 0 for it without root, and ftop shows
   nothing rather than a zero).
-- Revisit when: a chip has no `sgx` node or a different step count than `GPUPH`
-  reports (frequency then shows as unavailable), or `PSTR` is missing.
+- `GPUPH` may list more states than the table has values (amended 2026-10-08, issue 8:
+  an M6 lists P1 to P15 against 13 values). The n-th state runs at the n-th value; an
+  interval that spent time in a state past the table's end has no frequency, and no
+  frequency is worked out for such a state. The matching is `ftop_gpu_frequency`.
+  The table's length is the node's `perf-state-count` less the powered-down state
+  when that divides the values listed, else every value listed.
+- Revisit when: a chip has no `sgx` node, a chip runs in a state its table does not
+  cover (frequency then shows as unavailable and names the state), or `PSTR` is missing.
 
 ## Amendment: column motion (2026-10-07)
 

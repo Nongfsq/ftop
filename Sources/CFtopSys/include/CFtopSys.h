@@ -61,7 +61,23 @@ typedef struct {
     double max_mhz;     // top of the GPU's frequency table, or -1
     int steps;          // active states the channel reports
     int table_steps;    // values in the GPU's frequency table, 0 when none was found
+    int uncovered_state;      // index of the first state past the table's end that had residency, or -1
+    char uncovered_name[32];  // its name as IOReport gives it, e.g. "P14"; set by the sampler only
 } ftop_gpu_freq;
+
+// How many of the `values` a GPU node lists are its frequency table, given the number
+// of states the node declares (`perf-state-count`, the powered-down state included;
+// -1 when it has none). All of them when the count does not fit the values.
+int ftop_gpu_table_length(int values, int state_count);
+// Whether a state's name means the device was not running: "IDLE", "DOWN", "OFF".
+int ftop_state_is_idle(const char *name);
+// The frequency over an interval from the residency of each state and the frequency
+// table; no system calls. `idle[i]` is non-zero for a state that is not a performance
+// state; the n-th of the others runs at the n-th table value. The channel may list
+// more of them than the table has values: the frequency is known as long as none of
+// those had residency, and unknown (`mhz` and `max_mhz` -1, `uncovered_state` set)
+// when one did. Nothing is assumed about the frequency of a state the table lacks.
+void ftop_gpu_frequency(const int64_t *residencies, const uint8_t *idle, int states, const double *table, int table_count, ftop_gpu_freq *out);
 
 typedef struct ftop_gpu_sampler ftop_gpu_sampler;
 
