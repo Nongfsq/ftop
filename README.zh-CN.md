@@ -81,6 +81,16 @@ ftop 用来替代你常年开在终端标签页里的监视工具，换成一个
 
 要求：Apple Silicon Mac，macOS 15 或更新。
 
+**用 Homebrew。** 可以通过社区维护的非官方
+[ChiaKi-Li/cask tap](https://github.com/ChiaKi-Li/homebrew-cask) 安装：
+
+```bash
+brew install --cask ChiaKi-Li/cask/ftop
+```
+
+Homebrew 会将 `Ftop.app` 安装到 `/Applications`，可以从 Finder 打开。
+这个 Cask 不会将 `ftop` 命令添加到 `PATH`。
+
 **用发布包。** 在[发布页](https://github.com/Nongfsq/ftop/releases/latest)下载
 `Ftop-<版本>-arm64.zip`，解压后把 `Ftop.app` 移到 `~/Applications`。然后把命令链接到
 `PATH` 里的某个目录：

@@ -88,6 +88,16 @@ With system processes granted (below), the helper that lists them adds about 0.5
 
 Requirements: an Apple Silicon Mac with macOS 15 or later.
 
+**With Homebrew.** Install from the community-maintained, unofficial
+[ChiaKi-Li/cask tap](https://github.com/ChiaKi-Li/homebrew-cask):
+
+```bash
+brew install --cask ChiaKi-Li/cask/ftop
+```
+
+Homebrew installs `Ftop.app` in `/Applications`; open it from Finder.
+This Cask does not add the `ftop` command to your `PATH`.
+
 **From a release.** Download `Ftop-<version>-arm64.zip` from the
 [releases page](https://github.com/Nongfsq/ftop/releases/latest), unpack it, and move
 `Ftop.app` to `~/Applications`. Then link the command into a directory on your `PATH`:
