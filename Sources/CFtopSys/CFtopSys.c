@@ -801,6 +801,38 @@ void ftop_gpu_sampler_destroy(ftop_gpu_sampler *s) {
     free(s);
 }
 
+int ftop_state_is_idle(const char *name) {
+    return name && is_idle_state(name);
+}
+
+void ftop_gpu_frequency(const int64_t *residencies, const uint8_t *idle, int states, const double *table, int table_count, ftop_gpu_freq *out) {
+    double total = 0, active = 0, weighted = 0;
+    int active_states = 0, uncovered = -1;
+    for (int j = 0; j < states; j++) {
+        int64_t residency = residencies[j] < 0 ? 0 : residencies[j];
+        total += (double)residency;
+        if (idle[j]) continue;
+        active += (double)residency;
+        if (active_states < table_count) weighted += (double)residency * table[active_states];
+        else if (residency > 0 && uncovered < 0) uncovered = j;
+        active_states++;
+    }
+    // The node lists the steps once per power domain; the first run of them is the table.
+    // States past the table's end have no frequency: an interval that used one has none either.
+    int covered = active_states < table_count ? active_states : table_count;
+    int known = covered > 0 && uncovered < 0;
+    out->active = total > 0 ? active / total : -1;
+    out->max_mhz = -1;
+    if (known)
+        for (int j = 0; j < covered; j++)
+            if (table[j] > out->max_mhz) out->max_mhz = table[j];
+    out->mhz = known && active > 0 ? weighted / active : -1;
+    out->steps = active_states;
+    out->table_steps = table_count;
+    out->uncovered_state = table_count > 0 ? uncovered : -1;
+    out->uncovered_name[0] = 0;
+}
+
 int ftop_gpu_sampler_update(ftop_gpu_sampler *s, ftop_gpu_freq *out) {
     if (!s || !s->subscription) return -1;
     CFDictionaryRef current = IOReportCreateSamples(s->subscription, s->channels, NULL);
@@ -822,30 +854,18 @@ int ftop_gpu_sampler_update(ftop_gpu_sampler *s, ftop_gpu_freq *out) {
             copy_string(IOReportChannelGetChannelName(item), channel, sizeof(channel));
             if (strcmp(channel, "GPUPH") != 0) continue;
 
-            double total = 0, active = 0, weighted = 0;
-            int active_states = 0;
+            int64_t residencies[2 * MAX_STATES];
+            uint8_t idle[2 * MAX_STATES];
             int32_t states = IOReportStateGetCount(item);
+            if (states > 2 * MAX_STATES) states = 2 * MAX_STATES;
             for (int32_t j = 0; j < states; j++) {
-                int64_t residency = IOReportStateGetResidency(item, j);
-                if (residency < 0) residency = 0;
                 char state[32];
                 copy_string(IOReportStateGetNameForIndex(item, j), state, sizeof(state));
-                total += (double)residency;
-                if (is_idle_state(state)) continue;
-                active += (double)residency;
-                if (active_states < s->mhz_count) weighted += (double)residency * s->mhz[active_states];
-                active_states++;
+                residencies[j] = IOReportStateGetResidency(item, j);
+                idle[j] = (uint8_t)is_idle_state(state);
             }
-            // The node lists the steps once per power domain; the first run of them is the table.
-            int fits = active_states > 0 && s->mhz_count >= active_states;
-            out->active = total > 0 ? active / total : -1;
-            out->max_mhz = -1;
-            if (fits)
-                for (int j = 0; j < active_states; j++)
-                    if (s->mhz[j] > out->max_mhz) out->max_mhz = s->mhz[j];
-            out->mhz = fits && active > 0 ? weighted / active : -1;
-            out->steps = active_states;
-            out->table_steps = s->mhz_count;
+            ftop_gpu_frequency(residencies, idle, states, s->mhz, s->mhz_count, out);
+            if (out->uncovered_state >= 0) copy_string(IOReportStateGetNameForIndex(item, out->uncovered_state), out->uncovered_name, sizeof(out->uncovered_name));
             found = 0;
         }
     }
@@ -891,16 +911,34 @@ int ftop_gpu_sampler_describe(ftop_gpu_sampler *s, char *buffer, int capacity) {
             char channel[64];
             copy_string(IOReportChannelGetChannelName(item), channel, sizeof(channel));
             append(&out, " %s: ", channel);
-            int active_states = 0;
+            // The states past the end of the table, for the channel ftop reads: named, and which of them ran.
+            int read = s->mhz_count > 0 && strcmp(channel, "GPUPH") == 0;
+            char beyond[256] = "", used[256] = "";
+            int active_states = 0, beyond_count = 0;
             int32_t states = IOReportStateGetCount(item);
             for (int32_t j = 0; j < states && j < 2 * MAX_STATES; j++) {
                 int64_t residency = IOReportStateGetResidency(item, j);
                 char state[32];
                 copy_string(IOReportStateGetNameForIndex(item, j), state, sizeof(state));
                 append(&out, "%s%s %lld", j == 0 ? "" : ", ", state, (long long)residency);
-                if (!is_idle_state(state)) active_states++;
+                if (is_idle_state(state)) continue;
+                if (read && active_states >= s->mhz_count) {
+                    if (beyond_count++ > 0) strlcat(beyond, ", ", sizeof(beyond));
+                    strlcat(beyond, state, sizeof(beyond));
+                    if (residency > 0) {
+                        if (used[0]) strlcat(used, ", ", sizeof(used));
+                        strlcat(used, state, sizeof(used));
+                    }
+                }
+                active_states++;
             }
-            append(&out, "; %d active states\n", active_states);
+            append(&out, "; %d active states", active_states);
+            if (beyond_count > 0) {
+                append(&out, ", %d beyond the table's %d values (%s), ", beyond_count, s->mhz_count, beyond);
+                if (used[0]) append(&out, "used in this sample: %s, so it has no frequency", used);
+                else append(&out, "none used in this sample, so the others are read from the table in order");
+            }
+            append(&out, "\n");
         }
         if (CFArrayGetCount(list) > MAX_LISTED) append(&out, " and %ld more channels\n", (long)(CFArrayGetCount(list) - MAX_LISTED));
     }
