@@ -184,7 +184,9 @@ rewritten from scratch; it shares no code with it.
 ## Support
 
 ftop is free and open source. If it earns a place on your desktop, you can
-[buy me a coffee](https://buymeacoffee.com/frankmenger).
+buy me a coffee.
+
+<a href="https://buymeacoffee.com/frankmenger"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="44"></a>
 
 ## License
 

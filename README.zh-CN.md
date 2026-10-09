@@ -171,7 +171,9 @@ ftop 最初是 [btop](https://github.com/aristocratos/btop) 的一个分支，�
 ## 支持
 
 ftop 免费且开源。如果它在你的桌面上留了下来，可以
-[请我喝杯咖啡](https://buymeacoffee.com/frankmenger)。
+请我喝杯咖啡。
+
+<a href="https://buymeacoffee.com/frankmenger"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="44"></a>
 
 ## 许可证
 
