@@ -26,6 +26,7 @@ public final class PanelCanvasView: NSView {
     private var origin: CGPoint = .zero
     private let content = NSView()
     private let barsView = CoreBarsView()
+    private let gpuBarView = CoreBarsView()
     private let arcsView = ArcsView()
     private let rowsView = ProcessRowsView()
     private let card = ProcessCardWindow()
@@ -60,6 +61,7 @@ public final class PanelCanvasView: NSView {
         content.layer?.contentsGravity = .resize
         addSubview(content)
         addSubview(barsView)
+        addSubview(gpuBarView)
         addSubview(arcsView)
         addSubview(rowsView)
         addSubview(controls)
@@ -347,6 +349,14 @@ public final class PanelCanvasView: NSView {
             if !moveOnly { barsView.update(item, style: style) }
         } else {
             barsView.isHidden = true
+        }
+        if let item = scene.gpuBar {
+            gpuBarView.isHidden = false
+            let frame = item.rect.offsetBy(dx: origin.x, dy: origin.y)
+            if gpuBarView.frame != frame { gpuBarView.frame = frame }
+            if !moveOnly { gpuBarView.update(item, style: style) }
+        } else {
+            gpuBarView.isHidden = true
         }
         if arcsView.frame != frame { arcsView.frame = frame }
         if !moveOnly { arcsView.update(scene.arcs, style: style) }

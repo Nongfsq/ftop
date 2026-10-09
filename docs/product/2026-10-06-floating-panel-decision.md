@@ -449,6 +449,45 @@ nothing else" and "The menu bar still shows only CPU" above.
 - The reading does not have to be one the panel shows. A reading the machine does not
   give is a dash.
 
+## Amendment: the GPU has a column of its own (2026-10-09, direction approved, real panel not yet seen)
+
+The owner's picture of 0.2.4: in the compact layout the GPU's percentage and the
+temperature stood above core columns that were not theirs, at places that matched no
+column on any machine or at any width. Tried and rejected by the owner on the page
+"ftop · 标题行对齐 · 对比": moving the two to the right edge, and starting them on the
+left edge of some core column (a line met, and still no column they belonged to).
+Approved on the page "ftop · GPU 柱子 · 设计稿": form A, the wide column ("方案 A 是比较合理的").
+A user had asked for the same in issue 8. This replaces "The column area is the cores
+and nothing else. The GPU is a ring" and the GPU's pair of usage and memory above.
+
+- The rule: a figure above the columns stands over columns of its own, and those are as
+  wide as it is. The processor's figure is over the core columns; the GPU's is over the
+  GPU's column. Nothing else is above the columns.
+- One column, because the system reports one figure for the whole GPU. It is not drawn
+  as several to make room for text (owner). Instead it is as wide as its figure's room
+  for the widest value (`100 %`), so the badge starts where the column starts and the
+  figure ends where the column ends, by construction, on any machine and at any size.
+- It reads like a core column: height is usage, the line is frequency. It is in the
+  GPU's color, set apart by a gap wider than the one between kinds of core. This gives
+  the GPU's frequency a place on the panel (it was open below).
+- Where the core columns have rows under them in the same column, the GPU's column is
+  as wide as the side column, so the GPU's badge and column, the swap capsule, upload,
+  and the figures on the side column share one line.
+- The chip's temperature has no columns and leaves the title row: it is in the
+  machine's pair where that is shown; in the compact layout on the memory row's side
+  column, over the swap capsule; with power off in the larger layouts, in the second
+  place of the GPU's pair. A temperature that is the processor's own stays beside the
+  processor's figure.
+- The GPU's pair is what it holds and what it draws (memory, watts), since its usage is
+  now its column. Chosen without the owner's word on it; to be confirmed.
+- In the detailed layout the GPU's column has its frequency under it and no second
+  usage number.
+- Applies to the layouts with full-size columns (compact, full, detailed). The corner,
+  the strips, and the smallest layout are unchanged and still to be decided; with the
+  GPU off the title row is as before.
+- Cost: sizes changed. The compact layout's second column is wider (the memory row now
+  holds the temperature); the detailed layout is wider by the GPU's column.
+
 ## Rejected by the owner (do not reintroduce)
 
 - A processor figure larger than the figures beside it (2026-10-08): the core columns
@@ -463,9 +502,8 @@ nothing else" and "The menu bar still shows only CPU" above.
 
 - Whether the frequency line across each core column stays; the owner was asked and
   answered "leave it as is", so it stays for now.
-- The GPU's frequency is now only in its hover chip; the owner had asked for it to be
-  shown ("频率一起显示") when the GPU was a column with a frequency line. Whether it gets
-  a place in the new layout is open.
+- The GPU's frequency: closed on 2026-10-09 where the GPU has its column (the line
+  across it). Still only in the hover in the corner and the strips.
 - Further optional modules (process icons, finer memory breakdown, battery). GPU and
   power are decided above.
 - A module that is off and that this machine could not read is not dimmed in the

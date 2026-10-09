@@ -52,6 +52,8 @@ public struct BarsItem: Equatable, Sendable {
     public var showsFrequency: Bool
     public var gap: CGFloat
     public var groupGap: CGFloat
+    /// One color for every column instead of a color for each group of cores.
+    public var paint: Paint?
 }
 
 /// What a floating card says about one row of the process list.
@@ -132,6 +134,8 @@ public struct Scene: Equatable, Sendable {
     public var shapes: [ShapeItem] = []
     public var arcs: [ArcItem] = []
     public var bars: BarsItem?
+    /// The GPU's one column, beside the core columns and drawn the same way.
+    public var gpuBar: BarsItem?
     public var processes: ProcessRowsItem?
     public var clicks: [ClickRegion] = []
     /// Later regions sit on top of earlier ones.
@@ -173,6 +177,10 @@ public struct Scene: Equatable, Sendable {
         if var item = other.bars {
             item.rect = item.rect.offsetBy(dx: origin.x, dy: origin.y)
             bars = item
+        }
+        if var item = other.gpuBar {
+            item.rect = item.rect.offsetBy(dx: origin.x, dy: origin.y)
+            gpuBar = item
         }
     }
 

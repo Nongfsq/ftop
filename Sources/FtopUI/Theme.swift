@@ -76,6 +76,8 @@ public struct PanelStyle: Equatable, Sendable {
     // Core columns.
     var coreGap: CGFloat { points(4) }
     var coreGroupGap: CGFloat { points(6) }
+    /// Between the core columns and the GPU's column: more than between two kinds of core, since it is another part.
+    var gpuColumnGap: CGFloat { points(14) }
     var coreSlimWidth: CGFloat { points(5) }
     var coreNumberedWidth: CGFloat { points(25) }
     var miniCoreWidth: CGFloat { points(3) }
