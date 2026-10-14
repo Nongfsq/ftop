@@ -6,6 +6,7 @@
   <a href="https://github.com/Nongfsq/ftop/releases/latest">Download</a> ·
   <a href="#install">Install</a>
 </p>
+<p align="center"><a href="https://trendshift.io/repositories/290349?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-290349" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/290349/daily?language=Swift" alt="Nongfsq%2Fftop | Trendshift" width="250" height="55"/></a></p>
 
 <p align="center"><img src="docs/media/live.gif" width="760" alt="The panel through a few seconds: the core columns ease to each new reading"></p>
 
