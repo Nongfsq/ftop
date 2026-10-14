@@ -97,12 +97,8 @@ Requirements: an Apple Silicon Mac with macOS 15 or later.
 mkdir -p ~/.local/bin && ln -sfn ~/Applications/Ftop.app/Contents/MacOS/ftop ~/.local/bin/ftop
 ```
 
-The app is signed for local use only and is not notarized by Apple, so macOS blocks a
-copy downloaded with a browser. Clear the download mark once:
-
-```bash
-xattr -dr com.apple.quarantine ~/Applications/Ftop.app
-```
+From 0.2.6 the app is signed with a Developer ID and notarized by Apple, so it opens
+like any downloaded app.
 
 **From source.** Needs Xcode (built and tested with Xcode 27).
 

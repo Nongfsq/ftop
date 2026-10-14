@@ -54,6 +54,9 @@ public enum UpdateFeed {
     public static let latest = URL(string: "https://api.github.com/repos/Nongfsq/ftop/releases/latest")!
     /// Archives are taken from the project's own release downloads and nowhere else.
     static let downloadPrefix = "https://github.com/Nongfsq/ftop/releases/download/"
+    /// The code requirement every release from 0.2.6 on meets: signed by the project's
+    /// Developer ID, issued by Apple.
+    public static let signer = "anchor apple generic and certificate leaf[subject.OU] = \"YHQ2HJF58N\""
 
     public static func archiveName(_ version: AppVersion) -> String { "Ftop-\(version)-arm64.zip" }
 

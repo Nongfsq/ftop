@@ -117,7 +117,13 @@ final class Updater {
             info["CFBundleIdentifier"] as? String == "dev.ftop.app",
             (info["CFBundleShortVersionString"] as? String).flatMap(AppVersion.init) == release.version
         else { throw Failure("the archive does not hold ftop \(release.version)") }
-        try await Self.run("/usr/bin/codesign", ["--verify", "--deep", "--strict", app.path])
+        // A copy signed with the Developer ID accepts only an update signed the same way;
+        // an ad-hoc copy (0.2.5 and earlier) can still move to a signed release.
+        var verify = ["--verify", "--deep", "--strict"]
+        if (try? await Self.run("/usr/bin/codesign", verify + ["-R=" + UpdateFeed.signer, target.path])) != nil {
+            verify.append("-R=" + UpdateFeed.signer)
+        }
+        try await Self.run("/usr/bin/codesign", verify + [app.path])
 
         _ = try manager.replaceItemAt(target, withItemAt: app)
         log.info("installed \(release.version.description, privacy: .public), restarting")

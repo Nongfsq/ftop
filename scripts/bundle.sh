@@ -1,5 +1,8 @@
 #!/bin/bash
-# Builds a release and assembles build/Ftop.app, ad-hoc signed for this machine.
+# Builds a release and assembles build/Ftop.app. It is ad-hoc signed for this machine
+# unless FTOP_SIGN_IDENTITY names a Developer ID certificate in the keychain; then
+# every executable is signed with it, the hardened runtime, and a secure timestamp,
+# as notarization requires (scripts/release.sh does this).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -15,6 +18,12 @@ cp Support/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
 # case-insensitive disk.
 cp "$bin/FtopApp" "$app/Contents/MacOS/FtopPanel"
 cp "$bin/ftop" "$bin/ftop-helper" "$app/Contents/MacOS/"
-codesign --force --sign - "$app/Contents/MacOS/ftop-helper" "$app/Contents/MacOS/ftop"
-codesign --force --sign - "$app"
+if [ -n "${FTOP_SIGN_IDENTITY:-}" ]; then
+    sign=(codesign --force --options runtime --timestamp --sign "$FTOP_SIGN_IDENTITY")
+else
+    sign=(codesign --force --sign -)
+fi
+# Inside out: the bundle's signature seals the executables signed before it.
+"${sign[@]}" "$app/Contents/MacOS/ftop-helper" "$app/Contents/MacOS/ftop"
+"${sign[@]}" "$app"
 echo "Built $app"

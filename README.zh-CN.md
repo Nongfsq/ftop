@@ -90,12 +90,7 @@ ftop 用来替代你常年开在终端标签页里的监视工具，换成一个
 mkdir -p ~/.local/bin && ln -sfn ~/Applications/Ftop.app/Contents/MacOS/ftop ~/.local/bin/ftop
 ```
 
-这个应用只做了本机签名，没有经过苹果公证，所以用浏览器下载的副本会被 macOS 拦住。
-清除一次下载标记即可：
-
-```bash
-xattr -dr com.apple.quarantine ~/Applications/Ftop.app
-```
+从 0.2.6 起，应用用 Developer ID 签名并经过苹果公证，下载后可以像普通应用一样直接打开。
 
 **从源码构建。** 需要 Xcode（用 Xcode 27 构建和测试）。
 
