@@ -126,10 +126,23 @@ public struct PanelStyle: Equatable, Sendable {
     /// From the glyph's ink to the figure.
     static let menuBarGap: CGFloat = 3.5
     static let menuBarPadding: CGFloat = 7
+    /// Between one reading's figure and the next reading's glyph.
+    static let menuBarEntryGap: CGFloat = 8
     static let menuBarNumberSize: CGFloat = 12
     static let menuBarUnitSize: CGFloat = 10
     static let menuBarUnitGap: CGFloat = 0.5
     static let menuBarUnitOpacity: CGFloat = 0.62
+
+    // Resizing from inside the panel: how far in from an edge the pointer turns into the
+    // resize cursor, and the longer reach along both edges at a corner, so the diagonal is
+    // easy to hit. The band is the whole of it, with nothing outside the border, so it is
+    // wider than the system's; the content starts about 10 pt in at the smallest scale.
+    // A small panel gets at most a quarter of its shorter side (a third at a corner), so
+    // the middle still moves it.
+    static let resizeBand: CGFloat = 9
+    static let resizeCorner: CGFloat = 20
+    /// The ring around the panel that resizes it too, as the system's border reaches outside other windows.
+    static let resizeOutside: CGFloat = 6
 
     // The control block: the settings as round switches.
     static let controlDisc: CGFloat = 30

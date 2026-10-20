@@ -20,6 +20,16 @@ public final class PanelCanvasView: NSView {
     public var onSort: (ProcessSort) -> Void = { _ in }
     /// A right-click or control-click on the panel, with the pointer's place on screen.
     public var onContextMenu: (NSPoint) -> Void = { _ in }
+    /// A press near an edge or corner, which resizes the panel; it returns when the press ends.
+    public var onEdgeDrag: (PanelEdges) -> Void = { _ in }
+    /// Near an edge or corner the pointer shows the resize cursor and a press resizes.
+    public var resizeEdges = true {
+        didSet { refreshHover() }
+    }
+    /// The edges whose resize cursor is showing.
+    private var cursorEdges: PanelEdges = []
+    /// The edges being dragged: their cursor stays until the press ends, wherever the pointer goes.
+    private var draggedEdges: PanelEdges = []
 
     private var scene = Scene()
     private var style = PanelStyle()
@@ -85,6 +95,14 @@ public final class PanelCanvasView: NSView {
     public override func mouseDown(with event: NSEvent) {
         hideChip()
         let point = convert(event.locationInWindow, from: nil)
+        let edges = edges(at: point)
+        guard edges.isEmpty else {
+            closeCard()
+            onEdgeDrag(edges)
+            pointer = window.map { convert($0.mouseLocationOutsideOfEventStream, from: nil) }
+            refreshHover()
+            return
+        }
         guard let region = scene.click(at: CGPoint(x: point.x - origin.x, y: point.y - origin.y)) else {
             closeCard()
             window?.performDrag(with: event)
@@ -446,13 +464,61 @@ public final class PanelCanvasView: NSView {
     /// True while the pointer is on a row of the process list.
     public private(set) var pointerOnProcesses = false
 
+    /// The edges a press at `point` would move: both in a corner's square, else the one
+    /// whose band it is in.
+    private func edges(at point: CGPoint) -> PanelEdges {
+        guard resizeEdges, bounds.contains(point) else { return [] }
+        // The pin and hide buttons take their own clicks.
+        if controls.alphaValue > 0, controls.frame.contains(point) { return [] }
+        let shorter = min(bounds.width, bounds.height)
+        func near(_ reach: CGFloat) -> PanelEdges {
+            var edges: PanelEdges = []
+            if point.x < reach { edges.insert(.left) } else if point.x > bounds.width - reach { edges.insert(.right) }
+            if point.y < reach { edges.insert(.top) } else if point.y > bounds.height - reach { edges.insert(.bottom) }
+            return edges
+        }
+        // A corner is the square its reach makes, so the pointer need not also be in the band.
+        let corner = near(min(PanelStyle.resizeCorner, shorter / 3))
+        if corner.isCorner { return corner }
+        return near(min(PanelStyle.resizeBand, shorter / 4))
+    }
+
+    /// The system's frame resize cursor for those edges, or the arrow again once the
+    /// pointer leaves them. The arrow is set only when a resize cursor was showing, so
+    /// other cursors are left alone.
+    private func showCursor(for edges: PanelEdges) {
+        let edges = draggedEdges.isEmpty ? edges : draggedEdges
+        guard edges != cursorEdges else { return }
+        cursorEdges = edges
+        (edges.cursor ?? NSCursor.arrow).set()
+    }
+
+    /// A resize from these edges begins, from the band here or from the ring around the
+    /// panel: their cursor stays until it ends, wherever the pointer goes.
+    public func holdResizeCursor(_ edges: PanelEdges) {
+        draggedEdges = edges
+        keepResizeCursor()
+    }
+
+    public func releaseResizeCursor() { draggedEdges = [] }
+
+    /// Sets the dragged edges' cursor again: AppKit puts the arrow back when the window's size changes.
+    public func keepResizeCursor() {
+        guard !draggedEdges.isEmpty else { return }
+        cursorEdges = []
+        showCursor(for: draggedEdges)
+    }
+
     private func refreshHover() {
+        // Near an edge the pointer is about resizing: no chip, nothing lit.
+        let edges = pointer.map(edges(at:)) ?? []
+        showCursor(for: edges)
         // The buttons appear while the pointer is along the top edge, where a title bar would be.
         let overControls = pointer.map { $0.y < 38 || controls.frame.insetBy(dx: -8, dy: -8).contains($0) } ?? false
         controls.setVisible(overControls && !controls.isHidden)
 
         let onButtons = pointer.map { controls.alphaValue > 0 && controls.frame.contains($0) } ?? false
-        let region = onButtons ? nil : pointer.flatMap { scene.hover(at: CGPoint(x: $0.x - origin.x, y: $0.y - origin.y)) }
+        let region = onButtons || !edges.isEmpty ? nil : pointer.flatMap { scene.hover(at: CGPoint(x: $0.x - origin.x, y: $0.y - origin.y)) }
         barsView.highlight(region?.coreIndex)
         pointerOnProcesses = region?.processKey != nil
         // While a card is open it is the only thing that speaks: no chip over it, and no other row lighting up under it.

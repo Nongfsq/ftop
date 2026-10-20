@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-// The only place ftop touches Apple's private IOReport and IOHID event APIs and the
-// undocumented controller (SMC) interface.
+// The only place ftop touches Apple's private IOReport and IOHID event APIs, the
+// undocumented controller (SMC) interface, and one window server property.
 // Every function reports failure instead of guessing; callers show "unavailable".
 
 typedef struct {
@@ -105,5 +105,11 @@ int ftop_gpu_read_stats(ftop_gpu_stats *out);
 int ftop_smc_gpu_temperature(ftop_temperature *out);
 // Reads one floating-point key such as "PSTR". Returns 0 on success, -1 otherwise.
 int ftop_smc_read_float(const char *key, double *out);
+
+// Lets this app set the pointer's cursor while another app is active (the window
+// server's connection property "SetsCursorInBackground"). ftop never becomes the
+// active app, and otherwise its resize cursors are ignored. Returns 0, or -1 when the
+// window server refused.
+int ftop_cursor_in_background(int allowed);
 
 #endif

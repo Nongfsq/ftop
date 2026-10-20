@@ -503,6 +503,57 @@ and nothing else. The GPU is a ring" and the GPU's pair of usage and memory abov
 - Cost: sizes changed. The compact layout's second column is wider (the memory row now
   holds the temperature); the detailed layout is wider by the GPU's column.
 
+## Proposal: resize cursors and up to three menu bar readings (2026-10-21, contributor branch, not yet seen by the owner)
+
+Built on the branch `feat/resize-cursors-and-menubar-trio` of a contributor's fork, to
+show the owner; nothing here is approved. It extends "The menu bar item: one reading"
+above and rule 9 (resized from any edge).
+
+- Resize cursors. Within 9 pt of an edge inside the panel, in a 20 pt square at a
+  corner (at most a quarter and a third of a small panel's shorter side), or in a 6 pt
+  ring around the outside of the panel, the pointer shows the system's frame resize cursor for that edge or corner
+  (`NSCursor.frameResize`), and a press there resizes the panel the way its border
+  does: the layout follows the drag and the window snaps on release, keeping the edges
+  that were not dragged. The pin and hide buttons, hover chips, and lit rows stay quiet
+  there, and none shows over the pin and hide buttons.
+- With the switch on, the panel does not use the system's border resize at all: the
+  system's resize area reaches a little inside the panel and took presses in the band
+  first, and while the system resizes the window the cursor it reports is the arrow
+  from the start of the drag to its end (logged on the owner's Mac; ftop could not
+  replace it, with or without the permission below). Every edge drag goes through the
+  band instead. The band is wider than the system's area because nothing is outside
+  the border any more; at 5 pt the pointer often crossed it between two mouse events.
+  With the switch off the window resizes from its border as before.
+- The ring is a clear child window under the panel (`Sources/FtopUI/ResizeHalo.swift`),
+  added after testing found the band alone hard to hit, the corners most: the band had
+  no outside part, and the panel's rounded corners let the pointer through at their
+  tips. The ring takes those tips too. Like the system's border it takes presses just
+  outside the panel. It is kept exactly around the panel, also where that reaches under
+  the menu bar.
+- ftop is never the active app, and macOS ignores a background app's cursor; the first
+  build set the cursor and nothing showed. While the switch is on, the app sets the
+  window server's connection property "SetsCursorInBackground" (private, declared in
+  `Sources/CFtopSys`), which lets the cursor through. Turning the switch off clears it.
+- The cursor holds through the whole drag and returns to the arrow on release. While
+  the drag lasts, clear windows of ftop's cover every screen, so a pointer that runs
+  ahead of the panel's edge is never over another app's window, whose cursor (a text
+  field's I-beam) would replace the resize cursor. They are made at launch and when the
+  screens change, and only shown during a drag: made at the press, a fast first move got
+  out before they were up. Measured on two 5K displays: about 2.4 MB for both, 27 ms to
+  make, 12 ms to show. A 512 pt window following the pointer instead was outrun by fast
+  drags while the panel re-laid itself out.
+- It is a switch, "Resize" ("调整大小"), on by default, in the free place of the palette
+  row of the control block, left of "More". It is `resizeEdges` in the settings file.
+- Menu bar. `menuBarShows` is a list of one to three readings, in the fixed order CPU,
+  memory, GPU, download, upload, power; a file that names one reading as a string still
+  reads. The "Menu bar shows" row lists the chosen names; its menu checks each pick on
+  or off, cannot remove the last one, and dims the rest once three are chosen.
+- The item draws each reading as before (glyph, figure, unit, its own steady room) with
+  8 pt between readings, as one picture.
+- Open: whether the switch belongs beside the palettes or in the "More" list; whether
+  the menu should stay open while several readings are picked (a system menu closes
+  after each pick).
+
 ## Rejected by the owner (do not reintroduce)
 
 - A processor figure larger than the figures beside it (2026-10-08): the core columns

@@ -220,7 +220,7 @@ final class ControlFace: NSView {
     enum Action { case togglePanel, quit, openFile, update }
 
     private enum Item: Hashable {
-        case module(ModuleID), floating, menuBar, motion, panel, quit, palette(PaletteID), more
+        case module(ModuleID), floating, menuBar, motion, panel, quit, palette(PaletteID), resizeEdges, more
         case shows, interval, rows, language, updates, file
     }
 
@@ -286,7 +286,7 @@ final class ControlFace: NSView {
         [
             Config.optional.map { .module($0) },
             [.floating, .menuBar, .motion, .panel, .quit],
-            PaletteID.allCases.map { .palette($0) },
+            PaletteID.allCases.map { .palette($0) } + [.resizeEdges],
         ]
     }
 
@@ -324,13 +324,14 @@ final class ControlFace: NSView {
         case .floating: config.floating
         case .menuBar: config.menuBar
         case .motion: config.motion
+        case .resizeEdges: config.resizeEdges
         default: false
         }
     }
 
     private func isSwitch(_ item: Item) -> Bool {
         switch item {
-        case .module, .floating, .menuBar, .motion: true
+        case .module, .floating, .menuBar, .motion, .resizeEdges: true
         default: false
         }
     }
@@ -344,6 +345,7 @@ final class ControlFace: NSView {
         case .panel: state.panelVisible ? Strings.pick("Hide", "收起") : Strings.pick("Show", "显示")
         case .quit: Strings.pick("Quit", "退出")
         case .palette(let palette): palette.displayName
+        case .resizeEdges: Strings.pick("Resize", "调整大小")
         case .more: Strings.pick("More", "更多")
         case .shows: Strings.pick("Menu bar shows", "菜单栏显示")
         case .interval: Strings.pick("Update every", "刷新间隔")
@@ -362,6 +364,7 @@ final class ControlFace: NSView {
         case .floating: "pin"
         case .menuBar: "menubar.rectangle"
         case .motion: "alternatingcurrent"
+        case .resizeEdges: "arrow.up.left.and.arrow.down.right"
         case .panel: state.panelVisible ? "eye.slash" : "eye"
         case .quit: "power"
         case .more: expanded ? "chevron.up" : "chevron.down"
@@ -393,7 +396,7 @@ final class ControlFace: NSView {
 
     private func value(_ item: Item) -> String {
         switch item {
-        case .shows: ControlPanel.name(of: config.menuBarShows) + "  ›"
+        case .shows: config.menuBarShows.map(ControlPanel.name(of:)).joined(separator: " · ") + "  ›"
         case .interval: Self.seconds(config.interval) + "  ›"
         case .rows: "\(config.maxProcesses)  ›"
         case .language: Self.name(of: config.language) + "  ›"
@@ -663,6 +666,9 @@ final class ControlFace: NSView {
         case .motion:
             state.config.motion.toggle()
             flipped(item, "motion", config.motion ? "true" : "false")
+        case .resizeEdges:
+            state.config.resizeEdges.toggle()
+            flipped(item, "resizeEdges", config.resizeEdges ? "true" : "false")
         case .palette(let palette):
             guard palette != config.palette else { return }
             state.config.palette = palette
@@ -739,11 +745,17 @@ final class ControlFace: NSView {
         }
         switch item {
         case .shows:
+            // Each pick adds or removes one reading. The last one cannot be removed, and
+            // with three chosen the others wait until one is removed.
+            menu.autoenablesItems = false
+            let note = NSMenuItem(title: Strings.pick("Up to \(Config.menuBarMost)", "最多 \(Config.menuBarMost) 项"), action: nil, keyEquivalent: "")
+            note.isEnabled = false
+            menu.addItem(note)
+            let chosen = config.menuBarShows
             for option in MenuBarMetric.allCases {
-                add(ControlPanel.name(of: option), checked: option == config.menuBarShows) {
-                    $0.menuBarShows = option
-                    return ("menuBarShows", "\"\(option.rawValue)\"")
-                }
+                let on = chosen.contains(option)
+                add(ControlPanel.name(of: option), checked: on) { $0.setMenuBarShows(option, !on) }
+                menu.items.last?.isEnabled = on ? chosen.count > 1 : chosen.count < Config.menuBarMost
             }
         case .interval:
             for option in Self.intervals {

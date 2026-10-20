@@ -32,6 +32,7 @@ public final class PanelModel {
         let layoutChanged = new.shown != config.shown || new.maxProcesses != config.maxProcesses || new.language != config.language
         config = new
         Strings.language = new.language
+        canvas.resizeEdges = new.resizeEdges
         if layoutChanged { sizes = [:] }
         return layoutChanged
     }

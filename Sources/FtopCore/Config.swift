@@ -14,7 +14,7 @@ public enum PaletteID: String, Sendable, Codable, CaseIterable {
     case sea, graphite, warm
 }
 
-/// The one reading the menu bar shows.
+/// A reading the menu bar can show; it shows one to three of them.
 public enum MenuBarMetric: String, Sendable, Codable, CaseIterable {
     case cpu, memory, gpu, download, upload, power
 
@@ -66,10 +66,12 @@ public struct Config: Sendable, Codable, Equatable {
     public var processSort: ProcessSort = .cpu
     /// Keep the panel above other windows.
     public var floating: Bool = false
-    /// Show one reading in the menu bar; clicking it shows or hides the panel.
+    /// Show readings in the menu bar; clicking them shows or hides the panel.
     public var menuBar: Bool = true
-    /// Which reading that is.
-    public var menuBarShows: MenuBarMetric = .cpu
+    /// Which readings, one to three, in the fixed order of `MenuBarMetric`.
+    public var menuBarShows: [MenuBarMetric] = [.cpu]
+    /// The pointer near the panel's edge shows the resize cursor, and a press there resizes.
+    public var resizeEdges: Bool = true
     /// New releases: install them, only offer them, or never look.
     public var updates: UpdateMode = .install
 
@@ -88,7 +90,13 @@ public struct Config: Sendable, Codable, Equatable {
         processSort = try container.decodeIfPresent(ProcessSort.self, forKey: .processSort) ?? defaults.processSort
         floating = try container.decodeIfPresent(Bool.self, forKey: .floating) ?? defaults.floating
         menuBar = try container.decodeIfPresent(Bool.self, forKey: .menuBar) ?? defaults.menuBar
-        menuBarShows = try container.decodeIfPresent(MenuBarMetric.self, forKey: .menuBarShows) ?? defaults.menuBarShows
+        // A list, or the single reading files written before there could be several.
+        if let list = try? container.decodeIfPresent([MenuBarMetric].self, forKey: .menuBarShows) {
+            menuBarShows = list
+        } else {
+            menuBarShows = try container.decodeIfPresent(MenuBarMetric.self, forKey: .menuBarShows).map { [$0] } ?? defaults.menuBarShows
+        }
+        resizeEdges = try container.decodeIfPresent(Bool.self, forKey: .resizeEdges) ?? defaults.resizeEdges
         updates = try container.decodeIfPresent(UpdateMode.self, forKey: .updates) ?? defaults.updates
         normalize()
     }
@@ -101,6 +109,21 @@ public struct Config: Sendable, Codable, Equatable {
         modules = modules.filter { ModuleID.stacked.contains($0) && seen.insert($0).inserted }
         if modules.isEmpty { modules = [.cpu] }
         hidden = ModuleID.added.filter(hidden.contains)
+        menuBarShows = Array(MenuBarMetric.allCases.filter(menuBarShows.contains).prefix(Self.menuBarMost))
+        if menuBarShows.isEmpty { menuBarShows = [.cpu] }
+    }
+
+    /// Most readings the menu bar shows at once.
+    public static let menuBarMost = 3
+
+    /// Adds or removes one menu bar reading and returns the `key: value` line of the
+    /// settings file that changed. The last reading stays, and a fourth is not added.
+    public mutating func setMenuBarShows(_ metric: MenuBarMetric, _ on: Bool) -> (key: String, value: String) {
+        var kept = Set(menuBarShows)
+        if on, kept.count < Self.menuBarMost { kept.insert(metric) }
+        if !on, kept.count > 1 { kept.remove(metric) }
+        menuBarShows = MenuBarMetric.allCases.filter(kept.contains)
+        return ("menuBarShows", "[" + menuBarShows.map { "\"\($0.rawValue)\"" }.joined(separator: ", ") + "]")
     }
 
     /// Everything the panel shows: the stacked modules in the user's order, then the added readings.
@@ -172,12 +195,16 @@ public struct Config: Sendable, Codable, Equatable {
           // Keep the panel above other windows (the pin button does the same).
           floating: false,
 
-          // Show one reading in the menu bar; click it to show or hide the panel.
+          // Show readings in the menu bar; click them to show or hide the panel.
           menuBar: true,
 
-          // Which reading: "cpu", "memory", "gpu", "download", "upload", or "power". It does
-          // not have to be one the panel shows.
-          menuBarShows: "cpu",
+          // Which readings, one to three: "cpu", "memory", "gpu", "download", "upload",
+          // "power". They do not have to be ones the panel shows.
+          menuBarShows: ["cpu"],
+
+          // Near the panel's edges and corners the pointer turns into the resize cursor,
+          // and a press there resizes the panel.
+          resizeEdges: true,
 
           // New versions: "install" looks once a day and installs what it finds, "check"
           // only offers it in the right-click menu, "off" never goes online.

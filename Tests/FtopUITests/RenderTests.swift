@@ -324,11 +324,18 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
             (.download, Format.compactRate(1_200_000)), (.upload, Format.compactRate(84_000)), (.power, Format.compactWatts(18.6)), (.gpu, nil),
         ]
         // Each figure with exactly its own room, then a short one in the room a longer one left behind.
-        var items = figures.map { ($0.0, $0.1, MenuBarPicture.figureWidth($0.1)) }
-        items.append((.cpu, Format.share(0.07), MenuBarPicture.figureWidth(Format.share(0.18))))
-        items.append((.cpu, Format.share(0.18), MenuBarPicture.figureWidth(Format.share(1))))
+        var items = figures.map { [MenuBarPicture.Entry($0.0, figure: $0.1, room: MenuBarPicture.figureWidth($0.1))] }
+        items.append([MenuBarPicture.Entry(.cpu, figure: Format.share(0.07), room: MenuBarPicture.figureWidth(Format.share(0.18)))])
+        items.append([MenuBarPicture.Entry(.cpu, figure: Format.share(0.18), room: MenuBarPicture.figureWidth(Format.share(1)))])
+        // Two and three readings in one item.
+        let pairs: [(MenuBarMetric, Format.Quantity?)] = [(.cpu, Format.share(0.18)), (.memory, Format.share(0.62))]
+        let trio = pairs + [(.gpu, Format.share(0.23))]
+        let mixed: [(MenuBarMetric, Format.Quantity?)] = [(.cpu, Format.share(1)), (.download, Format.compactRate(1_200_000)), (.power, nil)]
+        for group in [pairs, trio, mixed] {
+            items.append(group.map { MenuBarPicture.Entry($0.0, figure: $0.1, room: MenuBarPicture.figureWidth($0.1)) })
+        }
         let gap: CGFloat = 16
-        let width = items.reduce(gap) { $0 + MenuBarPicture.width(of: $1.0, room: $1.2) + gap }
+        let width = items.reduce(gap) { $0 + MenuBarPicture.width(of: $1) + gap }
         let context = try #require(
             CGContext(
                 data: nil, width: Int(width * scale), height: Int(height * 2 * scale), bitsPerComponent: 8, bytesPerRow: 0,
@@ -338,13 +345,13 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
             context.setFillColor(CGColor(gray: dark ? 0.14 : 0.93, alpha: 1))
             context.fill(CGRect(x: 0, y: CGFloat(row) * height, width: width, height: height))
             var x = gap
-            for (metric, figure, room) in items {
+            for entries in items {
                 let ink = CGColor(gray: dark ? 1 : 0, alpha: dark ? 1 : 0.85)
-                let item = CGRect(x: x, y: CGFloat(row) * height, width: MenuBarPicture.width(of: metric, room: room), height: height)
+                let item = CGRect(x: x, y: CGFloat(row) * height, width: MenuBarPicture.width(of: entries), height: height)
                 // The item's own area, as the highlight on a click shows it.
                 context.setFillColor(CGColor(gray: dark ? 1 : 0, alpha: 0.08))
                 context.fill(item.insetBy(dx: 0, dy: 2))
-                let picture = try #require(MenuBarPicture.picture(metric, figure: figure, room: room, height: height, scale: scale, color: ink))
+                let picture = try #require(MenuBarPicture.picture(entries, height: height, scale: scale, color: ink))
                 context.draw(picture, in: item)
                 x += item.width + gap
             }

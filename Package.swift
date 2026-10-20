@@ -9,7 +9,7 @@ let package = Package(
     targets: [
         .target(
             name: "CFtopSys",
-            linkerSettings: [.linkedFramework("IOKit"), .linkedFramework("CoreFoundation"), .linkedLibrary("IOReport")]
+            linkerSettings: [.linkedFramework("IOKit"), .linkedFramework("CoreFoundation"), .linkedFramework("CoreGraphics"), .linkedLibrary("IOReport")]
         ),
         .target(name: "FtopCore"),
         .target(name: "FtopSensors", dependencies: ["FtopCore", "CFtopSys"]),

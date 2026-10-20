@@ -87,8 +87,13 @@ import Testing
 
 @Suite struct ConfigTests {
     @Test func menuBarReading() throws {
-        #expect(try Config.decode(Data("{}".utf8)).menuBarShows == .cpu)
-        #expect(try Config.decode(Data(#"{ menuBarShows: "upload" }"#.utf8)).menuBarShows == .upload)
+        #expect(try Config.decode(Data("{}".utf8)).menuBarShows == [.cpu])
+        // A file from before there could be several readings names one.
+        #expect(try Config.decode(Data(#"{ menuBarShows: "upload" }"#.utf8)).menuBarShows == [.upload])
+        // A list keeps the fixed order, at most three, never empty.
+        #expect(try Config.decode(Data(#"{ menuBarShows: ["memory", "cpu", "memory"] }"#.utf8)).menuBarShows == [.cpu, .memory])
+        #expect(try Config.decode(Data(#"{ menuBarShows: ["power", "upload", "gpu", "cpu"] }"#.utf8)).menuBarShows == [.cpu, .gpu, .upload])
+        #expect(try Config.decode(Data(#"{ menuBarShows: [] }"#.utf8)).menuBarShows == [.cpu])
         let off = "off"
         let snapshot = Snapshot(
             time: Date(), cpu: .unavailable(off), memory: .unavailable(off), network: .value(NetworkSample(downBytesPerSecond: 1_240_000, upBytesPerSecond: 84_400)),
@@ -100,6 +105,25 @@ import Testing
         // Not reported is not zero.
         #expect(MenuBarMetric.gpu.figure(in: snapshot) == nil)
         #expect(snapshot.limited(to: [.cpu]).network.value == nil)
+    }
+
+    @Test func menuBarPicks() {
+        var config = Config()
+        #expect(config.setMenuBarShows(.gpu, true) == ("menuBarShows", #"["cpu", "gpu"]"#))
+        _ = config.setMenuBarShows(.memory, true)
+        #expect(config.menuBarShows == [.cpu, .memory, .gpu])
+        // A fourth is not added, and the last one stays.
+        _ = config.setMenuBarShows(.power, true)
+        #expect(config.menuBarShows == [.cpu, .memory, .gpu])
+        _ = config.setMenuBarShows(.cpu, false)
+        _ = config.setMenuBarShows(.memory, false)
+        _ = config.setMenuBarShows(.gpu, false)
+        #expect(config.menuBarShows == [.gpu])
+    }
+
+    @Test func resizeEdgesSetting() throws {
+        #expect(try Config.decode(Data("{}".utf8)).resizeEdges)
+        #expect(try !Config.decode(Data("{ resizeEdges: false }".utf8)).resizeEdges)
     }
 
     @Test func emptyFileGivesDefaults() throws {

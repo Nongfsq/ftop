@@ -1132,3 +1132,15 @@ int ftop_smc_gpu_temperature(ftop_temperature *out) {
     out->sensor_count = count;
     return 0;
 }
+
+// MARK: Pointer
+
+typedef int CGSConnectionID;
+extern CGSConnectionID _CGSDefaultConnection(void);
+extern int32_t CGSSetConnectionProperty(CGSConnectionID, CGSConnectionID, CFStringRef, CFTypeRef);
+
+int ftop_cursor_in_background(int allowed) {
+    CGSConnectionID connection = _CGSDefaultConnection();
+    CFBooleanRef value = allowed ? kCFBooleanTrue : kCFBooleanFalse;
+    return CGSSetConnectionProperty(connection, connection, CFSTR("SetsCursorInBackground"), value) == 0 ? 0 : -1;
+}

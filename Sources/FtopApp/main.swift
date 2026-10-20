@@ -33,19 +33,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var snapWork: DispatchWorkItem?
     private var samplingMode = SamplingMode.off
     private var resizeStart: NSRect?
+    /// True while ftop itself resizes the panel, from its band or the ring around it (`resize(from:)`).
+    private var edgeResizing = false
+    private var resizing: Bool { panel.inLiveResize || edgeResizing }
     /// True while the window is springing to its layout; nothing else may move it then.
     private var settling = false
     private let glide = FrameGlide()
-    /// What the menu bar item shows now: the reading, and its figure once there is one.
-    private var statusMetric: MenuBarMetric?
-    private var statusFigure: Format.Quantity?
-    /// The width the item keeps for its figure, when a figure last needed all of it, and
-    /// the widest figure since. The item grows at once and narrows only after a figure
-    /// that wide has stayed away for `statusRoomHold`, so the items beside it rarely move.
-    private var statusRoom: CGFloat = 0
-    private var statusRoomUsed: TimeInterval = 0
-    private var statusRoomNeeded: CGFloat = 0
-    static let statusRoomHold: TimeInterval = 60
+    private let shield = CursorShield()
+    private let halo = ResizeHalo()
+    /// What the menu bar item shows now: the readings, and their figures once there are some.
+    private var statusReadings: [StatusReading] = []
     private var statusTick = 0
 
     static let margin: CGFloat = 14
@@ -56,6 +53,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         model.apply(ConfigStore.load())
+        Pointer.setCursorInBackground(model.config.resizeEdges)
+        if model.config.resizeEdges { shield.prepare() }
         restoreMachineShape()
         buildPanel()
         updateStatusItem()
@@ -69,6 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         } else {
             panel.orderFrontRegardless()
         }
+        placeHalo()
         updateSampling()
         startUpdates()
     }
@@ -156,7 +156,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let frame = NSRect(origin: .zero, size: Self.defaultSize)
         panel = FloatingPanel(
             contentRect: frame,
-            styleMask: [.titled, .resizable, .fullSizeContentView, .nonactivatingPanel],
+            styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered, defer: false)
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
@@ -173,6 +173,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         panel.delegate = self
         panel.isReleasedWhenClosed = false
         applyFloating()
+        applyResizable()
 
         // The system material gives the translucent "glass" look and follows light and dark.
         let glass = NSVisualEffectView(frame: frame)
@@ -186,6 +187,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         canvas.onHide = { [weak self] in self?.hidePanel() }
         canvas.onSort = { [weak self] sort in self?.setProcessSort(sort) }
         canvas.onContextMenu = { [weak self] point in self?.showControl(at: point) }
+        canvas.onEdgeDrag = { [weak self] edges in self?.resize(from: edges) }
+        halo.onEdgeDrag = { [weak self] edges in self?.resize(from: edges) }
         glass.addSubview(canvas)
         panel.contentView = glass
         applyMinimumSize()
@@ -211,6 +214,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func applyMinimumSize() {
         panel.contentMinSize = model.size(of: LayoutChoice(candidate: LayoutCandidate(tier: .micro), scale: LayoutLadder.minimumMicroScale))
+    }
+
+    /// With the resize edges on, the panel resizes only from its own band inside the edge
+    /// and the ring around it.
+    /// The system's resize area along the border reaches a little inside the panel and
+    /// takes presses there first, and while the system resizes the window it shows the
+    /// arrow, which ftop cannot replace: measured, the cursor it reports during such a
+    /// resize was the arrow from the start of the drag to its end. Off, the window resizes
+    /// from its border, as before.
+    private func applyResizable() {
+        if model.config.resizeEdges { panel.styleMask.remove(.resizable) } else { panel.styleMask.insert(.resizable) }
+        placeHalo()
+    }
+
+    /// The ring around the panel that resizes it, while the panel shows and the resize edges are on.
+    private func placeHalo() {
+        if model.config.resizeEdges, panel.isVisible { halo.attach(to: panel) } else { halo.detach() }
     }
 
     /// Unpinned, the panel is an ordinary window: other windows cover it and it lives on
@@ -259,7 +279,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         hug(keeping: nearestCorner(), animated: false)
     }
 
-    func windowWillStartLiveResize(_ notification: Notification) {
+    func windowWillStartLiveResize(_ notification: Notification) { beginResize() }
+
+    private func beginResize() {
         glide.stop()
         settling = false
         resizeStart = panel.frame
@@ -268,12 +290,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     /// While an edge is dragged the panel shows the layout it will snap to.
     func windowDidResize(_ notification: Notification) {
-        guard panel.inLiveResize else { return }
+        halo.fit(to: panel.frame)
+        guard resizing else { return }
         let choice = model.choice(for: panel.frame.size, coarse: true)
         if choice != model.choice { model.setChoice(choice) }
     }
 
-    func windowDidEndLiveResize(_ notification: Notification) {
+    func windowDidEndLiveResize(_ notification: Notification) { endResize() }
+
+    private func endResize() {
         Typesetter.trim()
         model.setChoice(model.choice(for: panel.frame.size))
         // The edges the user did not drag stay where they are.
@@ -287,11 +312,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         hug(keeping: anchor, animated: true)
     }
 
+    /// A press near an edge or corner, on the panel or in the ring around it, resizes it as
+    /// the window's own border does: the dragged edges follow the pointer and the others stay put.
+    private func resize(from edges: PanelEdges) {
+        beginResize()
+        edgeResizing = true
+        let start = panel.frame
+        let grab = NSEvent.mouseLocation
+        let least = panel.frameRect(forContentRect: NSRect(origin: .zero, size: panel.contentMinSize)).size
+        shield.raise()
+        // AppKit puts the arrow back as the window changes size; it does not manage the
+        // cursor here while the drag lasts, and the resize cursor is set again every frame.
+        panel.disableCursorRects()
+        model.canvas.holdResizeCursor(edges)
+        let keeper = Timer(timeInterval: 1.0 / 120, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.model.canvas.keepResizeCursor() }
+        }
+        RunLoop.main.add(keeper, forMode: .common)
+        panel.trackEvents(matching: [.leftMouseDragged, .leftMouseUp], timeout: NSEvent.foreverDuration, mode: .eventTracking) { event, stop in
+            guard event?.type == .leftMouseDragged else {
+                stop.pointee = true
+                return
+            }
+            let pointer = NSEvent.mouseLocation
+            let dx = pointer.x - grab.x
+            let dy = pointer.y - grab.y
+            var frame = start
+            if edges.contains(.left) {
+                frame.origin.x = min(start.minX + dx, start.maxX - least.width)
+                frame.size.width = start.maxX - frame.minX
+            } else if edges.contains(.right) {
+                frame.size.width = max(least.width, start.width + dx)
+            }
+            // The panel's top is the screen's larger y.
+            if edges.contains(.bottom) {
+                frame.origin.y = min(start.minY + dy, start.maxY - least.height)
+                frame.size.height = start.maxY - frame.minY
+            } else if edges.contains(.top) {
+                frame.size.height = max(least.height, start.height + dy)
+            }
+            MainActor.assumeIsolated {
+                self.panel.setFrame(frame, display: true)
+                self.model.canvas.keepResizeCursor()
+            }
+        }
+        keeper.invalidate()
+        model.canvas.releaseResizeCursor()
+        panel.enableCursorRects()
+        shield.lower()
+        edgeResizing = false
+        endResize()
+    }
+
     /// After a move settles, snap to the screen margins when close to them.
     func windowDidMove(_ notification: Notification) {
         snapWork?.cancel()
         // Resizing from the left or bottom edge also moves the window; that is not a drag.
-        guard !settling, !panel.inLiveResize else { return }
+        guard !settling, !resizing else { return }
         let work = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated { self?.snapToMargins() }
         }
@@ -300,7 +377,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func snapToMargins() {
-        guard NSEvent.pressedMouseButtons == 0, !panel.inLiveResize, !settling, let visible = panel.screen?.visibleFrame else { return }
+        guard NSEvent.pressedMouseButtons == 0, !resizing, !settling, let visible = panel.screen?.visibleFrame else { return }
         var frame = panel.frame
         let reach: CGFloat = 12
         let targets: [(CGFloat, WritableKeyPath<NSRect, CGFloat>)] = [
@@ -347,8 +424,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             sampler.stop()
             return
         }
-        // The menu bar's reading is read even when the panel does not show its module.
-        let forMenuBar = statusItem != nil ? [model.config.menuBarShows.module] : []
+        // The menu bar's readings are read even when the panel does not show their modules.
+        let forMenuBar = statusItem == nil ? [] : ModuleID.allCases.filter { module in model.config.menuBarShows.contains { $0.module == module } }
         let modules = wanted == .full ? model.config.shown + forMenuBar.filter { !model.config.shown.contains($0) } : forMenuBar
         sampler.start(interval: model.config.interval, modules: modules, usageOnly: wanted == .menuBarOnly) { [weak self] snapshot in
             Task { @MainActor in self?.ingest(snapshot) }
@@ -368,7 +445,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // The menu bar redraws through the system's status item machinery, which costs
         // more than drawing the whole panel; every other sample is enough for one number.
         statusTick += 1
-        if statusTick % 2 == 0, let metric = statusMetric { setStatusFigure(metric.figure(in: snapshot), isReading: true) }
+        if statusTick % 2 == 0, !statusReadings.isEmpty { setStatusFigures(from: snapshot) }
     }
 
     // MARK: Menu bar
@@ -377,7 +454,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard model.config.menuBar else {
             if let item = statusItem { NSStatusBar.system.removeStatusItem(item) }
             statusItem = nil
-            statusMetric = nil
+            statusReadings = []
             return
         }
         if statusItem == nil {
@@ -388,43 +465,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
             statusItem = item
         }
-        // A glyph says what the number measures. Another reading has another width and no figure yet.
-        let metric = model.config.menuBarShows
-        guard metric != statusMetric else { return }
-        statusMetric = metric
-        statusRoom = 0
-        setStatusFigure(nil, isReading: false)
-    }
-
-    private func setStatusFigure(_ figure: Format.Quantity?, isReading: Bool) {
-        let needed = MenuBarPicture.figureWidth(figure)
+        // A glyph says what each number measures. Other readings have other widths and no figures yet.
+        let metrics = model.config.menuBarShows
+        guard metrics != statusReadings.map(\.metric) else { return }
         let now = ProcessInfo.processInfo.systemUptime
-        var room = statusRoom
-        if needed >= room || !isReading {
-            // The dash before the first reading does not hold the width.
-            room = needed
-            statusRoomUsed = isReading ? now : -Self.statusRoomHold
-            statusRoomNeeded = 0
-        } else {
-            statusRoomNeeded = max(statusRoomNeeded, needed)
-            if now - statusRoomUsed > Self.statusRoomHold {
-                room = statusRoomNeeded
-                statusRoomUsed = now
-                statusRoomNeeded = 0
-            }
-        }
-        guard figure != statusFigure || room != statusRoom || statusItem?.button?.image == nil else { return }
-        statusFigure = figure
-        statusRoom = room
+        statusReadings = metrics.map { StatusReading(metric: $0) }
+        for index in statusReadings.indices { _ = statusReadings[index].take(nil, isReading: false, now: now) }
         drawStatusItem()
     }
 
+    private func setStatusFigures(from snapshot: Snapshot) {
+        let now = ProcessInfo.processInfo.systemUptime
+        var changed = statusItem?.button?.image == nil
+        for index in statusReadings.indices where statusReadings[index].take(statusReadings[index].metric.figure(in: snapshot), isReading: true, now: now) {
+            changed = true
+        }
+        if changed { drawStatusItem() }
+    }
+
     private func drawStatusItem() {
-        guard let metric = statusMetric, let button = statusItem?.button else { return }
+        guard !statusReadings.isEmpty, let button = statusItem?.button else { return }
         let scale = NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
-        statusItem?.length = MenuBarPicture.width(of: metric, room: statusRoom)
-        button.image = MenuBarPicture.image(metric, figure: statusFigure, room: statusRoom, height: NSStatusBar.system.thickness, scale: scale)
-        button.setAccessibilityLabel(ControlPanel.name(of: metric) + " " + (statusFigure.map { $0.number + $0.shortUnit } ?? "–"))
+        let entries = statusReadings.map { MenuBarPicture.Entry($0.metric, figure: $0.figure, room: $0.room) }
+        statusItem?.length = MenuBarPicture.width(of: entries)
+        button.image = MenuBarPicture.image(entries, height: NSStatusBar.system.thickness, scale: scale)
+        button.setAccessibilityLabel(
+            statusReadings.map { ControlPanel.name(of: $0.metric) + " " + ($0.figure.map { $0.number + $0.shortUnit } ?? "–") }.joined(separator: ", "))
     }
 
     @objc private func statusItemClicked() {
@@ -478,6 +544,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let needsRestart =
             config.interval != old.interval || config.shown != old.shown || config.menuBar != old.menuBar || config.menuBarShows != old.menuBarShows
         let layoutChanged = model.apply(config)
+        if config.resizeEdges != old.resizeEdges {
+            Pointer.setCursorInBackground(config.resizeEdges)
+            if config.resizeEdges { shield.prepare() } else { shield.release() }
+            applyResizable()
+        }
         applyFloating()
         updateStatusItem()
         updater.mode = config.updates
@@ -529,7 +600,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @objc private func environmentChanged() { updateMotion() }
-    @objc private func screensChanged() { pullOnScreen() }
+    @objc private func screensChanged() {
+        pullOnScreen()
+        if model.config.resizeEdges { shield.prepare() }
+    }
     /// Counters jump across sleep; restart so the first sample after wake is a clean baseline.
     @objc private func didWake() {
         updateSampling(restart: true)
@@ -562,12 +636,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func showPanel() {
         pullOnScreen()
         panel.orderFrontRegardless()
+        placeHalo()
         updateSampling()
     }
 
     @objc private func hidePanel() {
         model.canvas.dismissHover()
         panel.orderOut(nil)
+        placeHalo()
         updateSampling()
     }
 
@@ -635,6 +711,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 }
 
+/// One reading in the menu bar item, and the width it keeps for its figure: when a
+/// figure last needed all of it, and the widest figure since. The room grows at once and
+/// narrows only after a figure that wide has stayed away for `hold`, so the items beside
+/// it rarely move.
+@MainActor
+struct StatusReading {
+    static let hold: TimeInterval = 60
+
+    let metric: MenuBarMetric
+    var figure: Format.Quantity?
+    var room: CGFloat = 0
+    private var roomUsed: TimeInterval = 0
+    private var roomNeeded: CGFloat = 0
+
+    init(metric: MenuBarMetric) { self.metric = metric }
+
+    /// Takes a new figure; true when what is drawn changed.
+    mutating func take(_ new: Format.Quantity?, isReading: Bool, now: TimeInterval) -> Bool {
+        let needed = MenuBarPicture.figureWidth(new)
+        var newRoom = room
+        if needed >= room || !isReading {
+            // The dash before the first reading does not hold the width.
+            newRoom = needed
+            roomUsed = isReading ? now : -Self.hold
+            roomNeeded = 0
+        } else {
+            roomNeeded = max(roomNeeded, needed)
+            if now - roomUsed > Self.hold {
+                newRoom = roomNeeded
+                roomUsed = now
+                roomNeeded = 0
+            }
+        }
+        guard new != figure || newRoom != room else { return false }
+        figure = new
+        room = newRoom
+        return true
+    }
+}
+
 /// Reads and edits the user's settings file.
 enum ConfigStore {
     static func ensureFileExists() {
@@ -687,6 +803,49 @@ let delegate = AppDelegate()
 application.delegate = delegate
 application.setActivationPolicy(.accessory)
 application.run()
+
+/// Clear windows over every screen while an edge of the panel is dragged, so the pointer
+/// is always over one of ftop's own windows. Otherwise a pointer that runs ahead of the
+/// panel's edge passes over other apps' windows, and their cursors (a text field's
+/// I-beam) replace the resize cursor. They are made ahead of time and kept: making them
+/// at the press took long enough that a fast first move got out before they were up.
+/// Measured on two 5K displays: about 2.4 MB for both, 27 ms to make, 12 ms to show.
+@MainActor
+final class CursorShield {
+    private var windows: [NSWindow] = []
+
+    /// Makes the windows for the screens there are now.
+    func prepare() {
+        release()
+        windows = NSScreen.screens.map { screen in
+            let window = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+            window.setFrame(screen.frame, display: false)
+            window.isOpaque = false
+            window.backgroundColor = .clear
+            window.hasShadow = false
+            // Set explicitly, so the clear window still counts as under the pointer.
+            window.ignoresMouseEvents = false
+            window.level = .popUpMenu
+            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
+            window.isReleasedWhenClosed = false
+            return window
+        }
+    }
+
+    func raise() {
+        if windows.isEmpty { prepare() }
+        windows.forEach { $0.orderFrontRegardless() }
+    }
+
+    func lower() {
+        windows.forEach { $0.orderOut(nil) }
+    }
+
+    func release() {
+        windows.forEach { $0.close() }
+        windows = []
+    }
+}
 
 /// Takes a window to a frame in step with the display.
 ///
