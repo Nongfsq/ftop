@@ -1,0 +1,5 @@
+0.0 recording started; game not running (baseline)
+17.9 cue: start the game
+115.4 probe
+160.7 cue: stop the game
+180.6 recording ended
