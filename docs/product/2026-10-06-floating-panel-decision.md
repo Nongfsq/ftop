@@ -563,8 +563,8 @@ palettes with that name. It extends "The menu bar item: one reading" above and r
 
 ## GPU usage is busy time weighted by clock (2026-10-31, approved by delegation)
 
-- Approved by the owner's delegation to the contributor who measured it; the user who
-  reported it found the GPU figure high at rest. Evidence in
+- Approved by the owner's delegation to the contributor who found it and measured it:
+  the GPU figure read high at rest on their Mac. Evidence in
   `docs/evidence/2026-10-28-gpu-usage/`.
 - The GPU's usage is the share of its peak throughput in use: for each performance
   state, the time in it times its clock, summed, over the interval times the top clock

@@ -29,7 +29,7 @@ had no task ledger before this plan.
 
 ## Summary and current reality
 
-A user found the GPU figure high at rest. Measured on an M5 Max driving two 5K
+The contributor found the GPU figure high at rest. Measured on an M5 Max driving two 5K
 displays: the GPU is busy 20–50 % of the time at its lowest clock (338 MHz) drawing
 under 1 W, and ftop shows that busy share because the driver's `Device Utilization %`
 is a share of time, blind to clock and to how many cores run.
@@ -71,8 +71,8 @@ Append to `docs/product/2026-10-06-floating-panel-decision.md` after the "Resize
 cursors" section, as an amendment titled
 "GPU usage is busy time weighted by clock (2026-10-31, approved by delegation)":
 
-- Approved by the owner's delegation to the contributor who measured it; the user who
-  reported it found the GPU figure high at rest. Evidence in
+- Approved by the owner's delegation to the contributor who found it and measured it:
+  the GPU figure read high at rest on their Mac. Evidence in
   `docs/evidence/2026-10-28-gpu-usage/`.
 - The GPU's usage is the share of its peak throughput in use: for each performance
   state, the time in it times its clock, summed, over the interval times the top clock
