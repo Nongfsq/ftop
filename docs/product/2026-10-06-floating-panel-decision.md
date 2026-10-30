@@ -585,16 +585,30 @@ palettes with that name. It extends "The menu bar item: one reading" above and r
   is: clock-weighted (`GPUPH` with a known clock) → busy share from `GPUPH` when the
   clock is unknown (a state past the table, as on the M6, or no table) → the driver's
   `Device Utilization %` when IOReport gives nothing. A value none of them can give is
-  unavailable, never 0. Busy share 0 with the table known is a true 0.
+  unavailable, never 0. Busy share 0 with the table known is a true 0. During the game
+  recording the driver's `Device Utilization %` read 0 six times while the hardware was
+  32–62 % busy; `GPUPH` never did.
 - The hover gains the busy share, only when it differs from the figure:
   `GPU 10 % · busy 37 % · 0.34 GHz · 0.9 W · VRAM 1.4 GB · 56°`. Nothing else on the
   panel changes; the menu bar reading follows the figure.
 - The word stays "usage". Activity Monitor and `nvidia-smi` show busy time, so the
   numbers differ from theirs; the hover's busy share is their number.
-- Known gap, accepted: a lightly loaded GPU at full clock (a few of its cores busy)
-  reads higher than its share of full-load power, by about 2–3× in the measurements.
-  No readable counter reports how many cores are busy (`ut-aggd.md`), and the only
-  reading that tracks it is the watts, which are beside the figure.
+- Known gaps, accepted, measured on the contributor's M5 Max (full load 84 W):
+  - Lowest clock at rest: the window server compositing a 5K display at 338 MHz reads
+    7–10 % (busy 34–44 %) at about 0.8 W, 1 % of full-load power; about 8× the power
+    share. The clock-weighted figure counts cycles; the lowest clock is also the lowest
+    voltage, so each cycle costs less energy than the definition assumes.
+  - Graphics load at mid clock: a 4K, 120 fps game in an Android emulator reads 42 %
+    (busy 59 %, 1.17 GHz average, driver 50 %) at 10 W, 12 % of full-load power; about
+    3.5×. The clock bounced each frame between the top step and the lowest three.
+  - Why not V²·f: in these measurements V²·f stays at a fixed 2.7–2.9× of the power
+    share at every clock, so it is the better power proxy. It was still not chosen: it
+    restates the watts beside the figure, needs a voltage table the chip lists four
+    variants of (about 5 % error), and breaks the column-under-line geometry unless the
+    line also changes, which would pin the 338 MHz line at 7.5 % height and hide a clock
+    held mid-way. The constant 2.8× that remains under either definition is the share of
+    cores busy, which no readable counter reports (`ut-aggd.md`). Evidence:
+    `game-4k120.md`.
 - Not done: the CPU core columns keep their time-share definition; the GPU column is
   the one column with the clock-weighted one, and the hover says so.
 
