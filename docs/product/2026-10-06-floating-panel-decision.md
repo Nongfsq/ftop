@@ -561,6 +561,27 @@ palettes with that name. It extends "The menu bar item: one reading" above and r
 - Still open: whether the menu should stay open while several readings are picked (a
   system menu closes after each pick).
 
+## The whole machine's glyph is the kind of Mac (2026-10-31, built, the owner's approval comes with the pull request)
+
+Agreed with the contributor after comparing the system's symbols at badge size, in light
+and dark. This replaces "the laptop" in the badges amendment's glyph list and "with the
+laptop glyph" in its corner rule.
+
+- The whole machine's watts are led by the kind of Mac it is, in the system's own
+  symbols: a laptop for every MacBook, `macmini`, `macstudio`, `desktopcomputer` for
+  the iMac, and `macpro.gen3`. A Mac whose kind is not known keeps the laptop.
+- The kind comes from the start of the name the firmware gives the Mac
+  (`IODeviceTree:/product`, `product-name`, such as "Mac Studio (M5 Max)"), read once
+  at launch. No table of model numbers: from the M2 on they are "MacNN,N" for every kind.
+- MacBook Air and MacBook Pro share the laptop. The system has no symbol for either,
+  and at 10.5 pt the only detail its laptops differ in (the notch) is under a pixel and
+  is on both. The name is in the power hover instead, before the watts.
+- Rejected: drawing Mac mini and Mac Studio in the app. Both system symbols read as
+  flat boxes and look alike side by side, but the panel shows one machine at a time and
+  neither reads as a laptop. The contributor preferred Apple's symbols.
+- The badge and the figure are placed the same for every kind, so the layout does not
+  depend on it. The menu bar's power reading keeps the bolt.
+
 ## Rejected by the owner (do not reintroduce)
 
 - A processor figure larger than the figures beside it (2026-10-08): the core columns

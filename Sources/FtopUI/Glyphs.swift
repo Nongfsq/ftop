@@ -1,8 +1,11 @@
 import AppKit
+import FtopCore
 
 /// The small picture inside a badge. Each reading has one, and it is the same picture at every window size.
 public enum Glyph: Hashable, Sendable {
-    case cpu, gpu, memory, temperature, download, upload, adapter, machine, power
+    case cpu, gpu, memory, temperature, download, upload, adapter, power
+    /// The whole machine, as the kind of Mac it is; a laptop where the kind is not known.
+    case machine(MachineKind?)
     /// A process that belongs to no app.
     case process
 
@@ -15,7 +18,14 @@ public enum Glyph: Hashable, Sendable {
         case .download: "arrow.down"
         case .upload: "arrow.up"
         case .adapter: "powerplug"
-        case .machine: "laptopcomputer"
+        case .machine(let kind):
+            switch kind {
+            case .mini: "macmini"
+            case .studio: "macstudio"
+            case .iMac: "desktopcomputer"
+            case .pro: "macpro.gen3"
+            case .laptop, nil: "laptopcomputer"
+            }
         case .power: "bolt.fill"
         case .cpu, .memory, .temperature, .process: nil
         }

@@ -61,33 +61,67 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
                 model.apply(config)
                 model.ingest(Snapshot.sample(performance: 10, efficiency: 4))
                 model.setChoice(model.choice(for: CGSize(width: width, height: height)))
-
-                let frame = NSRect(origin: .zero, size: model.hugSize)
-                let window = NSWindow(contentRect: frame, styleMask: [.borderless], backing: .buffered, defer: false)
-                window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
-                let backdrop = NSView(frame: frame)
-                backdrop.wantsLayer = true
-                // Stands in for the glass material over a mid-tone wallpaper.
-                backdrop.layer?.backgroundColor = (dark ? NSColor(white: 0.16, alpha: 1) : NSColor(white: 0.9, alpha: 1)).cgColor
-                model.canvas.frame = frame
-                backdrop.addSubview(model.canvas)
-                window.contentView = backdrop
-                model.render()
-                window.layoutIfNeeded()
-                backdrop.displayIfNeeded()
-                RunLoop.main.run(until: Date().addingTimeInterval(0.05))
-
-                let scale: CGFloat = 2
-                let bitmap = NSBitmapImageRep(
-                    bitmapDataPlanes: nil, pixelsWide: Int(frame.width * scale), pixelsHigh: Int(frame.height * scale), bitsPerSample: 8,
-                    samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
-                bitmap.size = frame.size
-                let context = NSGraphicsContext(bitmapImageRep: bitmap)!
-                backdrop.layer?.render(in: context.cgContext)
+                let bitmap = Self.capture(model, dark: dark)
                 let choice = model.choice.candidate
                 let label = "\(choice.tier)-c\(choice.columns)-p\(choice.processCount)\(choice.memoryList ? "-mem" : "")"
                 let name = "\(Int(width))x\(Int(height))-\(label)-\(dark ? "dark" : "light").png"
                 try bitmap.representation(using: .png, properties: [:])!.write(to: directory.appending(path: name))
+            }
+        }
+    }
+
+    /// The panel as `model` draws it now, over a stand-in for the glass, at twice the point size.
+    static func capture(_ model: PanelModel, dark: Bool) -> NSBitmapImageRep {
+        let frame = NSRect(origin: .zero, size: model.hugSize)
+        let window = NSWindow(contentRect: frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        let backdrop = NSView(frame: frame)
+        backdrop.wantsLayer = true
+        // Stands in for the glass material over a mid-tone wallpaper.
+        backdrop.layer?.backgroundColor = (dark ? NSColor(white: 0.16, alpha: 1) : NSColor(white: 0.9, alpha: 1)).cgColor
+        model.canvas.frame = frame
+        backdrop.addSubview(model.canvas)
+        window.contentView = backdrop
+        model.render()
+        window.layoutIfNeeded()
+        backdrop.displayIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+
+        let scale: CGFloat = 2
+        let bitmap = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: Int(frame.width * scale), pixelsHigh: Int(frame.height * scale), bitsPerSample: 8,
+            samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+        bitmap.size = frame.size
+        let context = NSGraphicsContext(bitmapImageRep: bitmap)!
+        backdrop.layer?.render(in: context.cgContext)
+        return bitmap
+    }
+
+    /// The whole machine's watts with each kind of Mac's picture, in the layouts that show them.
+    @Test(.enabled(if: renderDirectory != nil))
+    func writeMachineImages() throws {
+        let directory = URL(fileURLWithPath: renderDirectory!)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let names: [MachineKind: String] = [
+            .laptop: "MacBook Pro (14-inch, M4 Pro, 2024)", .mini: "Mac mini (2024)", .studio: "Mac Studio (M5 Max)", .iMac: "iMac (24-inch, 2024)",
+            .pro: "Mac Pro (2023)",
+        ]
+        for dark in [true, false] {
+            for (width, height) in [(445.0, 820.0), (270.0, 150.0), (760.0, 30.0)] {
+                for kind in MachineKind.allCases {
+                    let model = PanelModel()
+                    var config = Config()
+                    config.motion = false
+                    config.language = .zh
+                    model.apply(config)
+                    var snapshot = Snapshot.sample(performance: 10, efficiency: 4)
+                    snapshot.productName = names[kind]
+                    model.ingest(snapshot)
+                    model.setChoice(model.choice(for: CGSize(width: width, height: height)))
+                    let bitmap = Self.capture(model, dark: dark)
+                    let name = "machine-\(kind.rawValue)-\(Int(width))x\(Int(height))-\(dark ? "dark" : "light").png"
+                    try bitmap.representation(using: .png, properties: [:])!.write(to: directory.appending(path: name))
+                }
             }
         }
     }
