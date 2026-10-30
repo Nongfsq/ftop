@@ -455,6 +455,12 @@ Recorded 2026-10-06. Each item replaces the matching decision or amendment above
   when that divides the values listed, else every value listed.
 - Revisit when: a chip has no `sgx` node, a chip runs in a state its table does not
   cover (frequency then shows as unavailable and names the state), or `PSTR` is missing.
+- GPU usage (amended 2026-10-31): usage is derived in `FtopCore` from the `GPUPH`
+  sampler's active share, weighted frequency and top frequency (`ftop_gpu_freq`), with
+  the busy share and then the driver's `Device Utilization %` as fallbacks;
+  `ftop_gpu_read_stats` still supplies memory. Reason: the driver's field is blind to
+  clock and reads a false 0 at times. The product rule is the decision's amendment "GPU
+  usage is busy time weighted by clock".
 
 ## Amendment: column motion (2026-10-07)
 

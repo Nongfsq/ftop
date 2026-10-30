@@ -561,6 +561,43 @@ palettes with that name. It extends "The menu bar item: one reading" above and r
 - Still open: whether the menu should stay open while several readings are picked (a
   system menu closes after each pick).
 
+## GPU usage is busy time weighted by clock (2026-10-31, approved by delegation)
+
+- Approved by the owner's delegation to the contributor who measured it; the user who
+  reported it found the GPU figure high at rest. Evidence in
+  `docs/evidence/2026-10-28-gpu-usage/`.
+- The GPU's usage is the share of its peak throughput in use: for each performance
+  state, the time in it times its clock, summed, over the interval times the top clock
+  (`Σ residency_i × f_i ÷ (total × f_max)`). The data is IOReport `GPUPH` and the
+  `sgx` node's `perf-states`, the same data the frequency line uses. It equals busy
+  share × frequency ÷ top frequency.
+- Why: the figure should answer "how much of the GPU is being used", not "what share
+  of the time was it awake". Watts already answer the power question in the GPU's
+  pair. Voltage was considered (V²·f) and rejected: it restates the watts, needs a
+  voltage table the chip lists four variants of, and breaks the geometry below. Windows
+  has used the clock-weighted definition for the CPU since Windows 8.
+- Geometry: the column's height is this usage and its line is frequency ÷ top
+  frequency, so the column never rises above the line, and the column touching the
+  line means 100 % busy at that clock. A column touching a line held mid-way reads
+  "saturated, clock held down" (thermal or power limit); a low line with a low column
+  reads "slow compositing". The limit signal lives in the shape, with no new element.
+- Fallbacks, in order, each named in `ftop doctor` as the temperature's sensor level
+  is: clock-weighted (`GPUPH` with a known clock) → busy share from `GPUPH` when the
+  clock is unknown (a state past the table, as on the M6, or no table) → the driver's
+  `Device Utilization %` when IOReport gives nothing. A value none of them can give is
+  unavailable, never 0. Busy share 0 with the table known is a true 0.
+- The hover gains the busy share, only when it differs from the figure:
+  `GPU 10 % · busy 37 % · 0.34 GHz · 0.9 W · VRAM 1.4 GB · 56°`. Nothing else on the
+  panel changes; the menu bar reading follows the figure.
+- The word stays "usage". Activity Monitor and `nvidia-smi` show busy time, so the
+  numbers differ from theirs; the hover's busy share is their number.
+- Known gap, accepted: a lightly loaded GPU at full clock (a few of its cores busy)
+  reads higher than its share of full-load power, by about 2–3× in the measurements.
+  No readable counter reports how many cores are busy (`ut-aggd.md`), and the only
+  reading that tracks it is the watts, which are beside the figure.
+- Not done: the CPU core columns keep their time-share definition; the GPU column is
+  the one column with the clock-weighted one, and the hover says so.
+
 ## Rejected by the owner (do not reintroduce)
 
 - A processor figure larger than the figures beside it (2026-10-08): the core columns
