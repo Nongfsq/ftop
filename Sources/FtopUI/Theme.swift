@@ -339,6 +339,8 @@ public enum Strings {
 
     static func gpu(_ gpu: GPUSample, watts: Double?) -> String {
         var parts = ["GPU", "\(Format.percent(gpu.usage))%"]
+        // The figure is busy time weighted by clock; the busy share is what other monitors show.
+        if gpu.usageSource == .clockWeighted, let busy = gpu.busy.value { parts.append(pick("busy", "忙碌") + " \(Format.percent(busy))%") }
         parts.append(gpu.frequencyMHz.value.map { "\(Format.gigahertz($0)) GHz" } ?? pick("frequency unavailable", "频率不可用"))
         if let watts { parts.append("\(Format.watts(watts)) W") }
         parts.append(gpu.memoryBytes.value.map { "VRAM \(Format.gigabytes($0)) GB" } ?? pick("VRAM unavailable", "VRAM 不可用"))

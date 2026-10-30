@@ -163,6 +163,40 @@ import Testing
     }
 }
 
+/// The GPU's usage ladder, with numbers measured on an M5 Max (docs/evidence/2026-10-28-gpu-usage).
+@Suite struct GPUUsageTests {
+    @Test func busyTimeIsWeightedByClock() throws {
+        let rest = try #require(GPUSample.usage(busy: 0.479, mhz: 451, maxMHz: 1620, driver: 0.37))
+        #expect(abs(rest.usage - 0.133) < 0.001)
+        #expect(rest.source == .clockWeighted)
+        let full = try #require(GPUSample.usage(busy: 0.999, mhz: 1619, maxMHz: 1620, driver: nil))
+        #expect(abs(full.usage - 0.998) < 0.001)
+        #expect(full.source == .clockWeighted)
+    }
+
+    @Test func idleWithAKnownTableIsATrueZero() throws {
+        let idle = try #require(GPUSample.usage(busy: 0, mhz: nil, maxMHz: 1620, driver: 0.37))
+        #expect(idle.usage == 0)
+        #expect(idle.source == .clockWeighted)
+    }
+
+    @Test func fallsBackToBusyTimeThenTheDriver() throws {
+        let busy = try #require(GPUSample.usage(busy: 0.5, mhz: nil, maxMHz: nil, driver: 0.4))
+        #expect(busy.usage == 0.5)
+        #expect(busy.source == .busyTime)
+        let driver = try #require(GPUSample.usage(busy: nil, mhz: nil, maxMHz: nil, driver: 0.37))
+        #expect(driver.usage == 0.37)
+        #expect(driver.source == .driver)
+        #expect(GPUSample.usage(busy: nil, mhz: nil, maxMHz: nil, driver: nil) == nil)
+    }
+
+    @Test func aProductAboveOneClamps() throws {
+        let over = try #require(GPUSample.usage(busy: 1, mhz: 1700, maxMHz: 1620, driver: nil))
+        #expect(over.usage == 1)
+        #expect(over.source == .clockWeighted)
+    }
+}
+
 @Suite struct CoreTopologyTests {
     private static func types(_ text: String) -> [UInt8] { text.utf8.map { $0 == 46 ? 0 : $0 } }  // "." is a CPU without a type
 

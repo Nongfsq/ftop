@@ -324,7 +324,8 @@ public struct SceneBuilder {
     }
 
     /// The GPU's one column in `rect`, with a hover over it. One column: the system reports
-    /// one figure for the whole GPU. Height is its usage; the line, where shown, its frequency.
+    /// one figure for the whole GPU. Height is its usage, busy time weighted by clock, so it
+    /// never rises above the line, where shown, which is its frequency.
     private func gpuBar(in rect: CGRect, frequency: Bool, hoverHeight: CGFloat? = nil) -> Scene {
         var scene = Scene()
         let sample = CoreSample(

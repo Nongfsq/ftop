@@ -262,14 +262,17 @@ final class GPUProvider {
 
     func sample() -> Reading<GPUSample> {
         var stats = ftop_gpu_stats()
-        guard ftop_gpu_read_stats(&stats) == 0, stats.utilization >= 0 else { return .unavailable("the graphics driver reports no GPU utilization") }
+        let driverRead = ftop_gpu_read_stats(&stats) == 0
         var raw = ftop_gpu_freq()
         let frequency: Reading<Double>
+        let busy: Reading<Double>
         var top: Double?
         if ftop_gpu_sampler_update(sampler, &raw) != 0 {
             frequency = .unavailable("IOReport returned no GPU sample")
+            busy = .unavailable("IOReport returned no GPU sample")
         } else {
             top = raw.max_mhz > 0 ? raw.max_mhz : nil
+            busy = raw.active >= 0 ? .value(raw.active) : .unavailable("IOReport reports no GPU activity data")
             if raw.mhz > 0 {
                 frequency = .value(raw.mhz)
             } else if raw.table_steps == 0 {
@@ -284,13 +287,18 @@ final class GPUProvider {
                 frequency = .unavailable("the GPU was powered down for the whole interval")
             }
         }
+        let driver = driverRead && stats.utilization >= 0 ? stats.utilization : nil
+        guard let usage = GPUSample.usage(busy: busy.value, mhz: frequency.value, maxMHz: top, driver: driver) else {
+            return .unavailable("neither IOReport nor the graphics driver reports GPU usage")
+        }
         // Temperature moves slowly; read it every fifth sample.
         if temperatureAge % 5 == 0 { temperature = Self.readTemperature() }
         temperatureAge += 1
+        let memory: Reading<UInt64> =
+            driverRead && stats.memory_bytes >= 0 ? .value(UInt64(stats.memory_bytes)) : .unavailable("the graphics driver reports no memory in use")
         return .value(
             GPUSample(
-                usage: stats.utilization, frequencyMHz: frequency, maxFrequencyMHz: top,
-                memoryBytes: stats.memory_bytes >= 0 ? .value(UInt64(stats.memory_bytes)) : .unavailable("the graphics driver reports no memory in use"),
+                usage: usage.usage, busy: busy, usageSource: usage.source, frequencyMHz: frequency, maxFrequencyMHz: top, memoryBytes: memory,
                 temperature: temperature))
     }
 

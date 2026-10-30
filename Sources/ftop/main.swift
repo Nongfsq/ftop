@@ -96,7 +96,8 @@ func probe(json: Bool) {
         let frequency = gpu.frequencyMHz.value.map { Format.gigahertz($0) + " GHz" } ?? "frequency unavailable: \(gpu.frequencyMHz.reason ?? "")"
         let memory = gpu.memoryBytes.value.map { Format.gigabytes($0) + " GB in use" } ?? "memory unavailable"
         let temperature = gpu.temperature.value.map { "\(Format.degrees($0.celsius)) from \($0.sensorCount) sensors" } ?? "temperature unavailable"
-        print("GPU \(Format.percent(gpu.usage))%, \(frequency), \(memory), \(temperature)")
+        let busy = gpu.usageSource == .clockWeighted ? gpu.busy.value.map { ", busy \(Format.percent($0))%" } ?? "" : ""
+        print("GPU \(Format.percent(gpu.usage))%\(busy), \(frequency), \(memory), \(temperature)")
     case .unavailable(let reason): print("GPU unavailable: \(reason)")
     }
     switch snapshot.power {
@@ -138,7 +139,13 @@ func doctor() {
     line("memory", snapshot.memory.value != nil, snapshot.memory.reason ?? "used, compressed, swap, pressure")
     line("network", snapshot.network.value != nil, snapshot.network.reason ?? "64-bit counters on en* interfaces")
     if let gpu = snapshot.gpu.value {
-        line("gpu usage", true, "one figure for the whole GPU, from the graphics driver")
+        let usage =
+            switch gpu.usageSource {
+            case .clockWeighted: "busy time weighted by clock, from IOReport (GPUPH and perf-states)"
+            case .busyTime: "busy time only, from IOReport; clock unknown: \(gpu.frequencyMHz.reason ?? "no frequency table")"
+            case .driver: "busy time from the graphics driver; IOReport gave no GPU activity"
+            }
+        line("gpu usage", true, usage)
         line("gpu frequency", gpu.maxFrequencyMHz != nil, gpu.maxFrequencyMHz == nil ? gpu.frequencyMHz.reason ?? "" : "read through IOReport without admin rights")
         line("gpu memory", gpu.memoryBytes.value != nil, gpu.memoryBytes.reason ?? "unified memory the GPU holds")
         line("gpu temperature", gpu.temperature.value != nil, gpu.temperature.reason ?? "\(gpu.temperature.value!.sensorCount) controller sensors")

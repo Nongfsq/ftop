@@ -119,7 +119,9 @@ import Testing
         var busy = Snapshot.sample(performance: 10, efficiency: 4)
         busy.network = .value(NetworkSample(downBytesPerSecond: 999_400_000, upBytesPerSecond: 888_800_000))
         busy.gpu = .value(
-            GPUSample(usage: 1, frequencyMHz: .unavailable("x"), maxFrequencyMHz: nil, memoryBytes: .value(88_800_000_000), temperature: .unavailable("x")))
+            GPUSample(
+                usage: 1, busy: .value(1), usageSource: .clockWeighted, frequencyMHz: .unavailable("x"), maxFrequencyMHz: nil,
+                memoryBytes: .value(88_800_000_000), temperature: .unavailable("x")))
         busy.power = .value(PowerSample(systemWatts: 888.8, inputWatts: .unavailable("x"), gpuWatts: .value(88.8)))
         for candidate in LayoutLadder.candidates(maxProcesses: 12, showsProcesses: true) {
             let choice = LayoutChoice(candidate: candidate, scale: 1)
