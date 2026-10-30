@@ -1,0 +1,460 @@
+Interrupt Statistics (by index)	gfx-asc 2	               First Level Interrupt Handler Count	fmt=1	unit=	drv=gfx-asc <id 0x100000526>
+Interrupt Statistics (by index)	gfx-asc 2	              Second Level Interrupt Handler Count	fmt=1	unit=	drv=gfx-asc <id 0x100000526>
+Interrupt Statistics (by index)	gfx-asc 2	        First Level Interrupt Handler Time (MATUs)	fmt=1	unit=	drv=gfx-asc <id 0x100000526>
+Interrupt Statistics (by index)	gfx-asc 2	   Second Level Interrupt Handler CPU Time (MATUs)	fmt=1	unit=	drv=gfx-asc <id 0x100000526>
+Interrupt Statistics (by index)	gfx-asc 2	Second Level Interrupt Handler System Time (MATUs)	fmt=1	unit=	drv=gfx-asc <id 0x100000526>
+Interrupt Statistics (by index)	gfx-asc 1	               First Level Interrupt Handler Count	fmt=1	unit=	drv=gfx-asc <id 0x100000526>
+Interrupt Statistics (by index)	gfx-asc 1	              Second Level Interrupt Handler Count	fmt=1	unit=	drv=gfx-asc <id 0x100000526>
+Interrupt Statistics (by index)	gfx-asc 1	        First Level Interrupt Handler Time (MATUs)	fmt=1	unit=	drv=gfx-asc <id 0x100000526>
+Interrupt Statistics (by index)	gfx-asc 1	   Second Level Interrupt Handler CPU Time (MATUs)	fmt=1	unit=	drv=gfx-asc <id 0x100000526>
+Interrupt Statistics (by index)	gfx-asc 1	Second Level Interrupt Handler System Time (MATUs)	fmt=1	unit=	drv=gfx-asc <id 0x100000526>
+Interrupt Statistics (by index)	gfx1-asc 2	               First Level Interrupt Handler Count	fmt=1	unit=	drv=gfx1-asc <id 0x100000527>
+Interrupt Statistics (by index)	gfx1-asc 2	              Second Level Interrupt Handler Count	fmt=1	unit=	drv=gfx1-asc <id 0x100000527>
+Interrupt Statistics (by index)	gfx1-asc 2	        First Level Interrupt Handler Time (MATUs)	fmt=1	unit=	drv=gfx1-asc <id 0x100000527>
+Interrupt Statistics (by index)	gfx1-asc 2	   Second Level Interrupt Handler CPU Time (MATUs)	fmt=1	unit=	drv=gfx1-asc <id 0x100000527>
+Interrupt Statistics (by index)	gfx1-asc 2	Second Level Interrupt Handler System Time (MATUs)	fmt=1	unit=	drv=gfx1-asc <id 0x100000527>
+Interrupt Statistics (by index)	gfx1-asc 1	               First Level Interrupt Handler Count	fmt=1	unit=	drv=gfx1-asc <id 0x100000527>
+Interrupt Statistics (by index)	gfx1-asc 1	              Second Level Interrupt Handler Count	fmt=1	unit=	drv=gfx1-asc <id 0x100000527>
+Interrupt Statistics (by index)	gfx1-asc 1	        First Level Interrupt Handler Time (MATUs)	fmt=1	unit=	drv=gfx1-asc <id 0x100000527>
+Interrupt Statistics (by index)	gfx1-asc 1	   Second Level Interrupt Handler CPU Time (MATUs)	fmt=1	unit=	drv=gfx1-asc <id 0x100000527>
+Interrupt Statistics (by index)	gfx1-asc 1	Second Level Interrupt Handler System Time (MATUs)	fmt=1	unit=	drv=gfx1-asc <id 0x100000527>
+Hub Stats	EventName Received	com.apple.agx.ctxswitchlatency	fmt=1	unit=	drv=CoreAnalyticsHub <id 0x100000398>
+SoC Stats	Events	UT_EXT_THROTTLE_ACCP	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	UT_EXT_THROTTLE_ACCM0	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	UT_EXT_THROTTLE_ACCM1	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	UT_EXT_THROTTLE_AFR	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	UT_EXT_THROTTLE_SOC_CI	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	UT_EXT_THROTTLE_PWRS	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	UT_EXT_THROTTLE_SOC_GM	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	UT_EXT_THROTTLE_MGPU03	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	UT_EXT_THROTTLE_MGPU12	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_PERFSTAT_00	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_PERFSTAT_01	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_PERFSTAT_02	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_VMIN	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_VNOM	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_VMAX	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_VOVD	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_VOVD2	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_PERFSTAT_08	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_PERFSTAT_09	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_PERFSTAT_10	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_PERFSTAT_11	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_PERFSTAT_12	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_PERFSTAT_13	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_PERFSTAT_14	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_PERFSTAT_15	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_PERFSTAT_00	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_PERFSTAT_01	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_PERFSTAT_02	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_PERFSTAT_03	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_PERFSTAT_04	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_PERFSTAT_05	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_F1	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_F2	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_F3	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_F4	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_F5	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_F6	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_F7	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_F8	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_PERFSTAT_14	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DCS_PERFSTAT_15	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	VDD_GPU03_VOLTAGE_CHANGE_COMPLETION	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	VDD_GPU12_VOLTAGE_CHANGE_COMPLETION	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	VDD_AFR_VOLTAGE_CHANGE_COMPLETION	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOCHOT0_L	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOCHOT1_L	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU0_THROTTLE_ADCLK_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU0_THROTTLE_SW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU0_THROTTLE_HW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU0_THROTTLE_DITHER_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU0_THROTTLE_PPT_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU0_THROTTLE_EXT_TRIG0	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU0_THROTTLE_EXT_TRIG1	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU0_THROTTLE_EXT_TRIG2	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU0_THROTTLE_EXT_TRIG3	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU1_THROTTLE_ADCLK_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU1_THROTTLE_SW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU1_THROTTLE_HW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU1_THROTTLE_DITHER_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU1_THROTTLE_PPT_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU1_THROTTLE_EXT_TRIG0	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU1_THROTTLE_EXT_TRIG1	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU1_THROTTLE_EXT_TRIG2	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU1_THROTTLE_EXT_TRIG3	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU2_THROTTLE_ADCLK_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU2_THROTTLE_SW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU2_THROTTLE_HW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU2_THROTTLE_DITHER_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU2_THROTTLE_PPT_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU2_THROTTLE_EXT_TRIG0	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU2_THROTTLE_EXT_TRIG1	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU2_THROTTLE_EXT_TRIG2	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU2_THROTTLE_EXT_TRIG3	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU3_THROTTLE_ADCLK_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU3_THROTTLE_SW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU3_THROTTLE_HW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU3_THROTTLE_DITHER_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU3_THROTTLE_PPT_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU3_THROTTLE_EXT_TRIG0	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU3_THROTTLE_EXT_TRIG1	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU3_THROTTLE_EXT_TRIG2	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	MGPU3_THROTTLE_EXT_TRIG3	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	AFR_THROTTLE_ADCLK_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	AFR_THROTTLE_SW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	AFR_THROTTLE_HW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	AFR_THROTTLE_DITHER_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	AFR_THROTTLE_PPT_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	AFR_THROTTLE_EXT_TRIG0	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	AFR_THROTTLE_EXT_TRIG1	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	AFR_THROTTLE_EXT_TRIG2	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	AFR_THROTTLE_EXT_TRIG3	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_FAB_THROTTLE_ADCLK_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_FAB_THROTTLE_SW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_FAB_THROTTLE_HW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_FAB_THROTTLE_DITHER_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_FAB_THROTTLE_PPT_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_FAB_THROTTLE_EXT_TRIG0	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_FAB_THROTTLE_EXT_TRIG1	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_FAB_THROTTLE_EXT_TRIG2	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_FAB_THROTTLE_EXT_TRIG3	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_C1PPT_THROTTLE_ADCLK_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_C1PPT_THROTTLE_SW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_C1PPT_THROTTLE_HW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_C1PPT_THROTTLE_DITHER_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_C1PPT_THROTTLE_PPT_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_C1PPT_THROTTLE_EXT_TRIG0	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_C1PPT_THROTTLE_EXT_TRIG1	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_C1PPT_THROTTLE_EXT_TRIG2	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_C1PPT_THROTTLE_EXT_TRIG3	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_QOS_THROTTLE_ADCLK_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_QOS_THROTTLE_SW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_QOS_THROTTLE_HW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_QOS_THROTTLE_DITHER_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_QOS_THROTTLE_PPT_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_QOS_THROTTLE_EXT_TRIG0	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_QOS_THROTTLE_EXT_TRIG1	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_QOS_THROTTLE_EXT_TRIG2	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_QOS_THROTTLE_EXT_TRIG3	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_THROTTLE_ADCLK_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_THROTTLE_SW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_THROTTLE_HW_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_THROTTLE_DITHER_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_THROTTLE_PPT_TRIG	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_THROTTLE_EXT_TRIG0	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_THROTTLE_EXT_TRIG1	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_THROTTLE_EXT_TRIG2	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SOC_THROTTLE_EXT_TRIG3	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_SLP_DDR_STATE	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_AWAKE_STATE	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_S2R_AOP_STATE	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+SoC Stats	Events	GFX_DEEP_WAIT_STATE	fmt=2	unit=24Mticks	drv=AppleT6050PMGR <id 0x100000588>
+Energy Model		GPU0	fmt=1	unit=mJ	drv=AppleT6050PMGR <id 0x100000588>
+Energy Model		AFR0	fmt=1	unit=mJ	drv=AppleT6050PMGR <id 0x100000588>
+GFX1	IOP State	status	fmt=2	unit=24Mticks	drv=RTBuddy(GFX1) <id 0x1000006e2>
+GFX1	Power State	power state	fmt=2	unit=24Mticks	drv=RTBuddy(GFX1) <id 0x1000006e2>
+GFX	IOP State	status	fmt=2	unit=24Mticks	drv=RTBuddy(GFX) <id 0x1000006d8>
+AMC Stats	Perf Counters	PRIM GFX AF RD	fmt=1	unit=B	drv=AppleT6050MemCacheController <id 0x100000587>
+AMC Stats	Perf Counters	PRIM GFX AF WR	fmt=1	unit=B	drv=AppleT6050MemCacheController <id 0x100000587>
+AMC Stats	Perf Counters	PRIM GFX DCS RD	fmt=1	unit=B	drv=AppleT6050MemCacheController <id 0x100000587>
+AMC Stats	Perf Counters	PRIM GFX DCS WR	fmt=1	unit=B	drv=AppleT6050MemCacheController <id 0x100000587>
+AMC Stats	Perf Counters	PRIM GFXC AF RD	fmt=1	unit=B	drv=AppleT6050MemCacheController <id 0x100000587>
+AMC Stats	Perf Counters	PRIM GFXC AF WR	fmt=1	unit=B	drv=AppleT6050MemCacheController <id 0x100000587>
+AMC Stats	Perf Counters	PRIM GFXC DCS RD	fmt=1	unit=B	drv=AppleT6050MemCacheController <id 0x100000587>
+AMC Stats	Perf Counters	PRIM GFXC DCS WR	fmt=1	unit=B	drv=AppleT6050MemCacheController <id 0x100000587>
+PMP0	AFR Floor	DIE1	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	AFR BW	AMCC RD	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	AFR BW	AMCC WR	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	AFR BW	AMCC RD+WR	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	AF BW	AGX RD	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	AF BW	AGX WR	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	AF BW	AGX RD+WR	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	DCS BW	AGX RD	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	DCS BW	AGX WR	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	DCS BW	AGX RD+WR	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	Energy	AGX	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	Energy	AGX AFR	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	AFR Floor	AGX	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	SOC Floor	AGX	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	DCS Floor	AGX	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	Volt-Temp HM	AGX_V_T	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	AGX	Mem Latency	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	AGX	#Mem Trans	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	SOC Floor	AGX-AF-BW	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	DCS Floor	AGX-DCS-BW	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	AFR Floor	AGX-AFR-BW	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	PWRS0	THROT-GPU-SUM	fmt=1	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	PWRS1	THROT-GPU-SUM	fmt=1	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	PMC DCS Floor	GFX	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	PMC SOC Floor	GFX	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	PMC DISP_INT Fl	GFX	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	PMC DISP_EXT Fl	GFX	fmt=2	unit=events	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	PMC Driver	GFX DCS	fmt=1	unit=24Mticks	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	PMC Driver	GFX SOC	fmt=1	unit=24Mticks	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	PMC Driver	GFX DISP_INT	fmt=1	unit=24Mticks	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+PMP0	PMC Driver	GFX DISP_EXT	fmt=1	unit=24Mticks	drv=RTBuddyIOReportingEndpoint <id 0x100000855>
+AOP endpoint 32	wake reasons	aop_workout_detected	fmt=1	unit=	drv=AppleSPU <id 0x100000850>
+AOP endpoint 34	wake reasons	aop_workout_detected	fmt=1	unit=	drv=AppleSPU <id 0x100000853>
+AOP endpoint 35	wake reasons	aop_workout_detected	fmt=1	unit=	drv=AppleSPU <id 0x100000adc>
+AOP endpoint 33	wake reasons	aop_workout_detected	fmt=1	unit=	drv=AppleSPU <id 0x100000948>
+Internal Statistics		Alloc system memory	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+Internal Statistics		In use system memory	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+Internal Statistics		GPU Restart Count	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+Internal Statistics		In use system memory (driver)	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+Internal Statistics		Last GPU Restart	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+Energy Model		GPU Energy	fmt=1	unit=nJ	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Power Zone Filters	GPU Power Zone Filter 0	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Power Zone Filters	GPU Power Zone Filter 1	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Power Zone Filters	GPU Power Zone Filter 2	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Power Zone Filters	GPU Power Zone Filter 3	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Power Zone Filters	GPU Power Zone Filter 4	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Power Zone Filters	GPU Power Filter	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GPU Performance States	GPUPH	fmt=2	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	AFR Performance States	AFRSTATE	fmt=2	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GPU Boost Controller Performance States	BSTGPUPH	fmt=2	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Fender State	FENDER	fmt=2	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	DVD Request States	GPUDVDH	fmt=2	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	CLTM-induced GPU Performance States	GPU_CLTM	fmt=2	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Active Time Histogram	GPU Active Time	fmt=3	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Idle Time Histogram	GPU Idle Time	fmt=3	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Fender Active Time Histogram	Fender Active Time	fmt=3	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Fender Idle Time Histogram	Fender Idle Time	fmt=3	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UV Warn State	UVWarn Instances	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UV Warn State	UVWarn Active	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	TA CtxSwitch Latency Histogram Bucket 0 (<100us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	TA CtxSwitch Latency Histogram Bucket 1 (<200us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	TA CtxSwitch Latency Histogram Bucket 2 (<300us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	TA CtxSwitch Latency Histogram Bucket 3 (<400us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	TA CtxSwitch Latency Histogram Bucket 4 (<500us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	TA CtxSwitch Latency Histogram Bucket 5 (<1000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	TA CtxSwitch Latency Histogram Bucket 6 (<2000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	TA CtxSwitch Latency Histogram Bucket 7 (<4000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	TA CtxSwitch Latency Histogram Bucket 8 (<10000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	TA CtxSwitch Latency Histogram Bucket 9 (<20000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	TA CtxSwitch Latency Histogram Bucket 10 (<40000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	TA CtxSwitch Latency Histogram Bucket Max (>=40000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	3D CtxSwitch Latency Histogram Bucket 0 (<100us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	3D CtxSwitch Latency Histogram Bucket 1 (<200us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	3D CtxSwitch Latency Histogram Bucket 2 (<300us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	3D CtxSwitch Latency Histogram Bucket 3 (<400us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	3D CtxSwitch Latency Histogram Bucket 4 (<500us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	3D CtxSwitch Latency Histogram Bucket 5 (<1000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	3D CtxSwitch Latency Histogram Bucket 6 (<2000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	3D CtxSwitch Latency Histogram Bucket 7 (<4000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	3D CtxSwitch Latency Histogram Bucket 8 (<10000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	3D CtxSwitch Latency Histogram Bucket 9 (<20000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	3D CtxSwitch Latency Histogram Bucket 10 (<40000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	3D CtxSwitch Latency Histogram Bucket Max (>=40000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	CL CtxSwitch Latency Histogram Bucket 0 (<100us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	CL CtxSwitch Latency Histogram Bucket 1 (<200us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	CL CtxSwitch Latency Histogram Bucket 2 (<300us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	CL CtxSwitch Latency Histogram Bucket 3 (<400us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	CL CtxSwitch Latency Histogram Bucket 4 (<500us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	CL CtxSwitch Latency Histogram Bucket 5 (<1000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	CL CtxSwitch Latency Histogram Bucket 6 (<2000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	CL CtxSwitch Latency Histogram Bucket 7 (<4000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	CL CtxSwitch Latency Histogram Bucket 8 (<10000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	CL CtxSwitch Latency Histogram Bucket 9 (<20000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	CL CtxSwitch Latency Histogram Bucket 10 (<40000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Context Switch Latencies	CL CtxSwitch Latency Histogram Bucket Max (>=40000us)	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	THM Counters	THM Activation Count	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	THM Counters	SFE Tier3 Count	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Off Abort Counter		GPU Off Abort Counter	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Issue Counts	Total Restarts	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Issue Counts	Unknown Restarts	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Issue Counts	mediaserverd Restarts	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Issue Counts	36223	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Issue Counts	41819	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Issue Counts	42822	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Issue Counts	DM Kill Count	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Issue Counts	GTP Kill Count	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Issue Counts	FRG Kill Count	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Issue Counts	CDM Kill Count	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Issue Counts	Memless Render Failed	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	GTP Single	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	GTP Dependent	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	GTP Idle	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	GTP Alloc New	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	GTP Round robin	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	FRG Single	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	FRG Dependent	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	FRG Idle	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	FRG Alloc New	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	FRG Round robin	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	CDM Single	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	CDM Dependent	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	CDM Idle	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	CDM Alloc New	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	vChannel Selection	CDM Round robin	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GTP vChannel Usage	Channel 0	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GTP vChannel Usage	Channel 1	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GTP vChannel Usage	Channel 2	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GTP vChannel Usage	Channel 3	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GTP vChannel Usage	Invalid	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	FRG vChannel Usage	Channel 0	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	FRG vChannel Usage	Channel 1	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	FRG vChannel Usage	Channel 2	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	FRG vChannel Usage	Channel 3	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	FRG vChannel Usage	Invalid	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	CDM vChannel Usage	Channel 0	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	CDM vChannel Usage	Channel 1	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	CDM vChannel Usage	Channel 2	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	CDM vChannel Usage	Channel 3	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	CDM vChannel Usage	Invalid	fmt=1	unit=events	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Pool Memory Usage	Total Number of UMA Pages	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Pool Memory Usage	Total Number of UMA Pools	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Pool Memory Usage	Total memory of UMA HW Pools	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Pool Memory Usage	Total memory of Backup Lists	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Pool Memory Usage	Shaders with only Ideal exceeding HW Max	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Pool Memory Usage	Shaders with only Min exceeding HW Max	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Pool Memory Usage	Shaders with both Min and Ideal exceeding HW Max	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Allocation Size Stats	Min of Minimum UMA Allocation Size	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Allocation Size Stats	Max of Minimum UMA Allocation Size	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Allocation Size Stats	Avg of Minimum UMA Allocation Size	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Allocation Size Stats	Min of Ideal UMA Allocation Size	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Allocation Size Stats	Max of Ideal UMA Allocation Size	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Allocation Size Stats	Avg of Ideal UMA Allocation Size	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Allocation Size Stats	Total submissions	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Metric Reserved Pages Histogram	UMA HW Reserved Pages Distribution	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UMA Metric Mapped Pages Histogram	UMA HW Mapped Pages Distribution	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Discrete Power Zone Engaged		GPU Discrete Power Zone Engaged	fmt=1	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GPU Discrete Power Zone Residency	PZRSDNCY	fmt=2	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GPU Power Controller States	PWRCTRL	fmt=2	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	AFR Power Controller States	AFRCTRL	fmt=2	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	PMU Loop Lost Performance Reason Code States	PMU_RC	fmt=2	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	PPM Target as % of Max GPU Power	GPU_PPM	fmt=2	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	UT Engagement centi-% Histogram	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 0	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 1	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 2	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 3	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 4	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 5	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 6	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 7	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 8	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 9	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 10	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 11	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 12	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 13	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 14	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT Engagement	UT Engagement centi-% Histogram for perf state 15	GPU UT Engagement centi-%	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 0	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 1	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 2	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 3	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 4	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 5	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 6	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 7	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 8	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 9	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 10	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 11	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 12	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 13	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 14	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+AVMR Offset	AVMR Offset Histogram for perf state 15	GPU AVMR Offset	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_0	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_1	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_2	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_3	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_4	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_5	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_6	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_7	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_8	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_9	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_10	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_11	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_12	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_13	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_14	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Min	AGX.Min_UT_Engagement_Perf_State_15	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_0	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_1	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_2	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_3	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_4	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_5	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_6	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_7	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_8	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_9	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_10	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_11	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_12	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_13	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_14	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Max	AGX.Max_UT_Engagement_Perf_State_15	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_0	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_1	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_2	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_3	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_4	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_5	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_6	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_7	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_8	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_9	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_10	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_11	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_12	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_13	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_14	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Sum	AGX.Sum_UT_Engagement_Perf_State_15	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_0	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_1	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_2	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_3	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_4	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_5	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_6	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_7	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_8	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_9	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_10	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_11	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_12	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_13	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_14	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Count	AGX.Count_UT_Engagement_Perf_State_15	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_0	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_1	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_2	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_3	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_4	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_5	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_6	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_7	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_8	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_9	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_10	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_11	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_12	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_13	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_14	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU UT AggD Stats	Not_Engaged_Count	AGX.UT_Not_Engaged_Perf_State_15	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Spill Buffer Usage Histogram	Spill Buffer Usage	fmt=3	unit=KiB	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Spill Buffer Metadata Usage Histogram	Spill Buffer Metadata Usage	fmt=3	unit=KiB	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	Spill Buffer Metadata Unused Blocks Per Task Histogram	Spill Buffer Unused Blocks per Task	fmt=3	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GPU Throttler Counters	Throttle Counter HWPI 	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GPU Throttler Counters	Throttle Counter DPE  	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GPU Throttler Counters	Throttle Counter Misc 	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GPU Throttler Counters	Throttle Counter IVDM 	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GPU Throttler Counters	Throttle Counter Total	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GPU Throttler Counters	Throttle Counter C1PPT   	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GPU Throttler Counters	Throttle Counter ExtAsync	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GPU Throttler Counters	Throttle Counter UT      	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GPU Throttler Counters	IVDM: Min Active Throttle Percent	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	GPU Throttler Counters	IVDM: Max Throttle Percent       	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	CS Throttler Counters	CS Throttle Counter HWPI 	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	CS Throttler Counters	CS Throttle Counter DPE  	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	CS Throttler Counters	CS Throttle Counter Misc 	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	CS Throttler Counters	CS Throttle Counter IVDM 	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	CS Throttler Counters	CS Throttle Counter Total	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	CS Throttler Counters	CS IVDM: Min Active Throttle Percent	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	CS Throttler Counters	CS IVDM: Max Throttle Percent       	fmt=1	unit=	drv=AGXAcceleratorG17X <id 0x10000055c>
+GPU Stats	8e9b50cd04211f53196f	<unknown>	fmt=2	unit=24Mticks	drv=AGXAcceleratorG17X <id 0x10000055c>

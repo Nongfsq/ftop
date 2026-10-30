@@ -1,0 +1,9 @@
+label,ftop_usage_pct,ftop_mhz,gpu_w
+idle,37,338,0.69
+stress2^10,86,1592,6.02
+stress2^12,80,1598,11.45
+stress2^14,91,1598,31.40
+stress2^16,93,1594,61.22
+stress2^18,99,1617,78.11
+stress2^20,97,1616,86.31
+composite,51,1490,12.84
