@@ -346,8 +346,9 @@ public enum Strings {
         return parts.joined(separator: " · ")
     }
 
-    static func power(_ power: PowerSample) -> String {
+    static func power(_ power: PowerSample, productName: String? = nil) -> String {
         var parts = [pick("Whole machine", "整机功耗") + " \(Format.watts(power.systemWatts)) W"]
+        if let productName { parts.insert(productName, at: 0) }
         if let input = power.inputWatts.value { parts.append(pick("Adapter", "电源输入") + " \(Format.watts(input)) W") }
         if let gpu = power.gpuWatts.value { parts.append("GPU \(Format.watts(gpu)) W") }
         return parts.joined(separator: " · ")

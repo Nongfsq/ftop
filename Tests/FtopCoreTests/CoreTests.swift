@@ -62,6 +62,22 @@ import Testing
     }
 }
 
+@Suite struct MachineKindTests {
+    @Test func kindComesFromTheStartOfTheProductName() {
+        #expect(MachineKind(productName: "Mac Studio (M5 Max)") == .studio)
+        #expect(MachineKind(productName: "MacBook Air (13-inch, M4, 2025)") == .laptop)
+        #expect(MachineKind(productName: "MacBook Pro (14-inch, M4 Pro, 2024)") == .laptop)
+        #expect(MachineKind(productName: "Mac mini (2024)") == .mini)
+        #expect(MachineKind(productName: "iMac (24-inch, 2024)") == .iMac)
+        #expect(MachineKind(productName: "Mac Pro (2023)") == .pro)
+    }
+
+    @Test func anotherNameHasNoKind() {
+        #expect(MachineKind(productName: "Apple Virtual Machine 1") == nil)
+        #expect(MachineKind(productName: "") == nil)
+    }
+}
+
 @Suite struct FormatTests {
     @Test func ratesSwitchUnits() {
         #expect(Format.rate(180_000).text == "180 KB/s")

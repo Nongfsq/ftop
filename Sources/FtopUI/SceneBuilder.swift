@@ -175,7 +175,9 @@ public struct SceneBuilder {
     private var gpuColumn: Bool { showsGPU && modules.contains(.cpu) }
     private var cpuHover: String { cpu.map { Strings.pick("CPU usage", "处理器总占用") + " \(Format.percent($0.usage))%" } ?? cpuReason }
     private var gpuHover: String { gpu.map { Strings.gpu($0, watts: power?.gpuWatts.value) } ?? snapshot?.gpu.reason ?? Strings.noReading }
-    private var powerHover: String { power.map(Strings.power) ?? snapshot?.power.reason ?? Strings.noReading }
+    private var powerHover: String { power.map { Strings.power($0, productName: snapshot?.productName) } ?? snapshot?.power.reason ?? Strings.noReading }
+    /// The badge's size and the figure's place are the same for every kind, so the layout does not depend on it.
+    private var machineGlyph: Glyph { .machine(snapshot?.machineKind) }
     private var temperatureHover: String {
         let temperature = cpu?.temperature
         return temperature?.value.map(Strings.temperature) ?? temperature?.reason ?? cpuReason
@@ -558,7 +560,7 @@ public struct SceneBuilder {
             }
         }
         if showsPower {
-            let system: Cell = (.machine, .disc(.secondary), power.map { Format.watts($0.systemWatts) } ?? "—", "W", "888.8", powerHover)
+            let system: Cell = (machineGlyph, .disc(.secondary), power.map { Format.watts($0.systemWatts) } ?? "—", "W", "888.8", powerHover)
             if temperaturePlace(pairs: true) == .below {
                 // The machine's pair: what it draws and how hot the chip is. What the adapter delivers is in the hover.
                 rows.append((system, heat))
@@ -836,7 +838,7 @@ public struct SceneBuilder {
         }
         if showsPower {
             let watts = power.map { Format.watts($0.systemWatts) + "W" } ?? "—"
-            figures.append { self.figure(.machine, .disc(.secondary), watts, hover: self.powerHover, x: $0, middle: $1) }
+            figures.append { self.figure(self.machineGlyph, .disc(.secondary), watts, hover: self.powerHover, x: $0, middle: $1) }
         }
         figures.append { self.temperatureFigure(x: $0, middle: $1) }
         for (index, make) in figures.enumerated() {
@@ -897,7 +899,7 @@ public struct SceneBuilder {
             if showsPower {
                 // The whole machine's watts: the only power figure a layout this small has room for.
                 let watts = power.map { Format.watts($0.systemWatts) + "W" } ?? "—"
-                lower.append(figure(.machine, .disc(.secondary), watts, hover: powerHover, x: 0, middle: middle))
+                lower.append(figure(machineGlyph, .disc(.secondary), watts, hover: powerHover, x: 0, middle: middle))
             }
             for (index, block) in lower.enumerated() { scene.append(block, at: CGPoint(x: padX + column(index), y: 0)) }
             y += style.badge + gap
