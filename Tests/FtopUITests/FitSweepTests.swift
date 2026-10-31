@@ -110,6 +110,13 @@ import Testing
         }
     }
 
+    /// Each kind of Mac has its own picture, and the system has every one of them.
+    @Test func everyKindOfMacHasItsPicture() {
+        let names = (MachineKind.allCases.map(Optional.some) + [nil]).compactMap { Glyph.machine($0).symbol }
+        #expect(Set(names).count == MachineKind.allCases.count)
+        for name in names { #expect(NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil, "\(name)") }
+    }
+
     /// A layout's size must not depend on the readings, or the window would move as numbers change.
     @Test func sizeDoesNotDependOnReadings() {
         let model = Self.model(MachineShape(performance: 10, efficiency: 4), ModuleID.stacked + ModuleID.added)
@@ -123,6 +130,8 @@ import Testing
                 usage: 1, busy: .value(1), usageSource: .clockWeighted, frequencyMHz: .unavailable("x"), maxFrequencyMHz: nil,
                 memoryBytes: .value(88_800_000_000), temperature: .unavailable("x")))
         busy.power = .value(PowerSample(systemWatts: 888.8, inputWatts: .unavailable("x"), gpuWatts: .value(88.8)))
+        // Another kind of Mac draws another picture in the same badge.
+        busy.productName = "Mac Pro (2023)"
         for candidate in LayoutLadder.candidates(maxProcesses: 12, showsProcesses: true) {
             let choice = LayoutChoice(candidate: candidate, scale: 1)
             let expected = model.size(of: choice)

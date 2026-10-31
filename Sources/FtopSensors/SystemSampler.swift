@@ -12,6 +12,7 @@ public final class SystemSampler: @unchecked Sendable {
     private let processes = ProcessProvider()
     private let gpu = GPUProvider()
     private let power = PowerProvider()
+    private let productName = ProductName.read()
     private var modules: Set<ModuleID> = Set(ModuleID.allCases)
     private var usageOnly = false
     private var tick = 0
@@ -68,7 +69,8 @@ public final class SystemSampler: @unchecked Sendable {
             network: modules.contains(.network) ? network.sample(now: now) : .unavailable(off),
             processes: modules.contains(.processes) ? lastProcesses : .unavailable(off),
             gpu: modules.contains(.gpu) ? gpu.sample() : .unavailable(off),
-            power: modules.contains(.power) ? power.sample(gpuWatts: gpu.watts(now: now)) : .unavailable(off)
+            power: modules.contains(.power) ? power.sample(gpuWatts: gpu.watts(now: now)) : .unavailable(off),
+            productName: productName
         )
     }
 }

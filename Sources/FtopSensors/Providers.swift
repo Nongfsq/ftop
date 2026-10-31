@@ -2,6 +2,7 @@ import CFtopSys
 import Darwin
 import Foundation
 import FtopCore
+import IOKit
 
 // Every provider keeps the previous counters it needs for deltas and returns a
 // `Reading`: a value, or the reason it is unavailable. Nothing here throws.
@@ -334,5 +335,20 @@ struct PowerProvider {
         let adapter: Reading<Double> =
             ftop_smc_read_float("PDTR", &input) == 0 && input >= 0 ? .value(input) : .unavailable("the controller reports no adapter power (PDTR)")
         return .value(PowerSample(systemWatts: system, inputWatts: adapter, gpuWatts: gpuWatts))
+    }
+}
+
+/// The Mac's name as the firmware gives it, such as "Mac Studio (M5 Max)". It does not
+/// change while running, so it is read once.
+enum ProductName {
+    static func read() -> String? {
+        let entry = IORegistryEntryFromPath(kIOMainPortDefault, "IODeviceTree:/product")
+        guard entry != 0 else { return nil }
+        defer { IOObjectRelease(entry) }
+        // A C string in a data property, ending in one or more zero bytes.
+        guard let data = IORegistryEntryCreateCFProperty(entry, "product-name" as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue() as? Data
+        else { return nil }
+        let name = String(decoding: data.prefix { $0 != 0 }, as: UTF8.self)
+        return name.isEmpty ? nil : name
     }
 }

@@ -120,6 +120,9 @@ func probe(json: Bool) {
 func doctor() {
     let (snapshot, sampler) = takeSnapshot()
     func line(_ name: String, _ ok: Bool, _ detail: String) { print("\(ok ? "ok  " : "MISS") \(name): \(detail)") }
+    // Which picture the whole machine's watts get; an unknown kind is drawn as a laptop.
+    let kind = snapshot.machineKind.map { "drawn as \($0.rawValue)" } ?? "kind not known, drawn as laptop"
+    line("machine", snapshot.machineKind != nil, snapshot.productName.map { "\($0), \(kind)" } ?? "the firmware gives no product name, \(kind)")
     if let cpu = snapshot.cpu.value {
         // Counted by what the system calls them: "5 super + 10 performance cores" on an M5 Pro.
         var tiers: [CoreTier] = []

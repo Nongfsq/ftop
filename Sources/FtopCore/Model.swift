@@ -163,6 +163,28 @@ public struct GPUSample: Sendable, Codable, Equatable {
     }
 }
 
+/// The kind of Mac, which the whole machine's figures are drawn with.
+public enum MachineKind: String, Sendable, Codable, CaseIterable {
+    case laptop, mini, studio, iMac, pro
+
+    /// From the name the firmware gives the Mac, such as "Mac Studio (M5 Max)"; nil for a name that starts with none of the kinds.
+    public init?(productName: String) {
+        if productName.hasPrefix("MacBook") {
+            self = .laptop
+        } else if productName.hasPrefix("Mac mini") {
+            self = .mini
+        } else if productName.hasPrefix("Mac Studio") {
+            self = .studio
+        } else if productName.hasPrefix("iMac") {
+            self = .iMac
+        } else if productName.hasPrefix("Mac Pro") {
+            self = .pro
+        } else {
+            return nil
+        }
+    }
+}
+
 public struct PowerSample: Sendable, Codable, Equatable {
     /// What the whole machine draws, in watts.
     public var systemWatts: Double
@@ -340,10 +362,12 @@ public struct Snapshot: Sendable, Codable, Equatable {
     public var processes: Reading<ProcessList>
     public var gpu: Reading<GPUSample>
     public var power: Reading<PowerSample>
+    /// The Mac's name as the firmware gives it, such as "Mac Studio (M5 Max)"; nil where it gives none.
+    public var productName: String?
 
     public init(
         time: Date, cpu: Reading<CPUSample>, memory: Reading<MemorySample>, network: Reading<NetworkSample>, processes: Reading<ProcessList>,
-        gpu: Reading<GPUSample>, power: Reading<PowerSample>
+        gpu: Reading<GPUSample>, power: Reading<PowerSample>, productName: String? = nil
     ) {
         self.time = time
         self.cpu = cpu
@@ -352,7 +376,11 @@ public struct Snapshot: Sendable, Codable, Equatable {
         self.processes = processes
         self.gpu = gpu
         self.power = power
+        self.productName = productName
     }
+
+    /// The kind of Mac, where its name says it.
+    public var machineKind: MachineKind? { productName.flatMap(MachineKind.init(productName:)) }
 
     /// The same readings with every module outside `modules` marked as turned off. The
     /// menu bar may need a module the panel does not show.

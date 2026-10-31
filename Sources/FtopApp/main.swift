@@ -599,7 +599,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         remote.addObserver(self, selector: #selector(checkForUpdate), name: Notification.Name("dev.ftop.app.update"), object: nil)
     }
 
-    @objc private func environmentChanged() { updateMotion() }
+    /// Foundation posts the power state on a queue of its own, not the main one; running
+    /// main-actor code there stops the app, so the handler moves to the main actor first.
+    @objc private nonisolated func environmentChanged() { Task { @MainActor in self.updateMotion() } }
     @objc private func screensChanged() {
         pullOnScreen()
         if model.config.resizeEdges { shield.prepare() }
