@@ -97,7 +97,8 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
         return bitmap
     }
 
-    /// The whole machine's watts with each kind of Mac's picture, in the layouts that show them.
+    /// The whole machine's watts with each kind of Mac's picture, in the layouts that show them:
+    /// the large panel and the corner with and without the GPU's column.
     @Test(.enabled(if: renderDirectory != nil))
     func writeMachineImages() throws {
         let directory = URL(fileURLWithPath: renderDirectory!)
@@ -107,19 +108,20 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
             .pro: "Mac Pro (2023)",
         ]
         for dark in [true, false] {
-            for (width, height) in [(445.0, 820.0), (270.0, 150.0), (760.0, 30.0)] {
+            for (width, height, gpu) in [(445.0, 820.0, true), (250.0, 160.0, true), (270.0, 130.0, false)] {
                 for kind in MachineKind.allCases {
                     let model = PanelModel()
                     var config = Config()
                     config.motion = false
                     config.language = .zh
+                    if !gpu { _ = config.setShown(.gpu, false) }
                     model.apply(config)
                     var snapshot = Snapshot.sample(performance: 10, efficiency: 4)
                     snapshot.productName = names[kind]
                     model.ingest(snapshot)
                     model.setChoice(model.choice(for: CGSize(width: width, height: height)))
                     let bitmap = Self.capture(model, dark: dark)
-                    let name = "machine-\(kind.rawValue)-\(Int(width))x\(Int(height))-\(dark ? "dark" : "light").png"
+                    let name = "machine-\(kind.rawValue)-\(Int(width))x\(Int(height))\(gpu ? "" : "-nogpu")-\(dark ? "dark" : "light").png"
                     try bitmap.representation(using: .png, properties: [:])!.write(to: directory.appending(path: name))
                 }
             }

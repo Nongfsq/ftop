@@ -110,7 +110,6 @@ import Testing
         }
     }
 
-    /// A layout's size must not depend on the readings, or the window would move as numbers change.
     /// Each kind of Mac has its own picture, and the system has every one of them.
     @Test func everyKindOfMacHasItsPicture() {
         let names = (MachineKind.allCases.map(Optional.some) + [nil]).compactMap { Glyph.machine($0).symbol }
@@ -118,6 +117,7 @@ import Testing
         for name in names { #expect(NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil, "\(name)") }
     }
 
+    /// A layout's size must not depend on the readings, or the window would move as numbers change.
     @Test func sizeDoesNotDependOnReadings() {
         let model = Self.model(MachineShape(performance: 10, efficiency: 4), ModuleID.stacked + ModuleID.added)
         let unavailable = Snapshot(
