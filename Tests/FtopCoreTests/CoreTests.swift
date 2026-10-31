@@ -190,6 +190,18 @@ import Testing
         #expect(GPUSample.usage(busy: nil, mhz: nil, maxMHz: nil, driver: nil) == nil)
     }
 
+    /// An M6 lists P14 and P15 past its 13 table values. An interval that ran in one has no
+    /// clock (`ftop_gpu_frequency` gives no frequency and no top), so it shows the busy
+    /// share, which is never below the clock-weighted figure; the next interval goes back.
+    @Test func aStatePastTheTableShowsTheBusyShare() throws {
+        let covered = try #require(GPUSample.usage(busy: 0.6, mhz: 669, maxMHz: 1735, driver: 0.3))
+        #expect(covered.source == .clockWeighted)
+        let uncovered = try #require(GPUSample.usage(busy: 0.6, mhz: nil, maxMHz: nil, driver: 0.3))
+        #expect(uncovered.usage == 0.6)
+        #expect(uncovered.source == .busyTime)
+        #expect(uncovered.usage >= covered.usage)
+    }
+
     @Test func aProductAboveOneClamps() throws {
         let over = try #require(GPUSample.usage(busy: 1, mhz: 1700, maxMHz: 1620, driver: nil))
         #expect(over.usage == 1)

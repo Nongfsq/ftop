@@ -1,110 +1,57 @@
-# 真实图形负载：模拟器游戏 4K 120 帧（2026-10-31）
+# A graphics load: a game at 4K and 120 fps in an emulator (2026-10-31)
 
-目的：用一段真实的图形负载核对 ftop 新算法（按频率加权的忙碌时间）的读数。K Xie 在面板上看到游戏时
-GPU 读数 45%、12.7 W、频率线约 79% 高（约 1.28 GHz），觉得偏高。这份数据也补上计划里
-"图形负载没测过"那一项。
+An English summary of the contributor's note. The per-second samples, markers, probe
+output, and scripts are in pull request 30's history, not in the repository.
 
-## 方法
+Purpose: check the clock-weighted figure against a real graphics load. During play the
+contributor saw 45 %, 12.7 W, and a frequency line at about 79 % (about 1.28 GHz) on
+the panel built from this branch.
 
-- 机器：M5 Max，一台 5K 显示器。负载：MuMuPlayer 模拟器里的游戏，渲染分辨率 3840×2160，
-  游戏内 120 帧，冷启动约 30 秒、进入关卡约 20 秒。分支开发版面板在运行（开着 GPU 模块）。
-- 采样：[ut-aggd-sample.c](ut-aggd-sample.c)，每秒一行，共 180 秒（178 行），数据在
-  [game-4k120-samples.csv](game-4k120-samples.csv)。流程脚本是 [game-4k120-record.sh](game-4k120-record.sh)，
-  用语音提示开始和停止；实际时间点见 [game-4k120-markers.txt](game-4k120-markers.txt)：
-  - 0 秒开始录制，游戏不运行（基线，MuMu 开着）；
-  - 17.9 秒提示开始游戏；
-  - 115.4 秒用开发版跑一次 `ftop probe --json`（[game-4k120-probe.txt](game-4k120-probe.txt)）；
-  - 160.7 秒提示停止；
-  - 180.6 秒录制结束。
-- 汇总：[game-4k120-summary.py](game-4k120-summary.py)，每行按 GPUPH 各档停留时间逐档计算，不用平均频率近似：
-  - 忙碌比例 = 非 OFF 档停留 ÷ 总时间；
-  - 忙碌时频率 = Σ 停留 × f ÷ 非 OFF 停留；
-  - 新算法（ftop 现在的数）= Σ 停留 × f ÷ 总时间 ÷ 1620 MHz；
-  - V²·f = Σ 停留 × V² × f ÷ 总时间 ÷（1075 mV² × 1620 MHz），电压 13 档 645 655 675 730 740 780 805 830 880 905 960 1040 1075 mV；
-  - 功耗占比 = GPU 瓦数 ÷ 84 W（`stress.swift` 纯计算满载）；
-  - 驱动 % = `Device Utilization %`。
-- 分段（按频率和功耗曲线人工划分）：
-  - 基线 0–14 秒；
-  - 加载 25–104 秒：24 秒前 GPU 还在 338 MHz；冷启动和进关卡期间时钟多在 700–1100 MHz；
-  - 游戏 105–167 秒：时钟升到 1.1–1.47 GHz，持续到停止；168 秒后回到 338 MHz。
+## Method
 
-  65–104 秒也可能已经在关卡里，所以另外单独列出。
+- M5 Max, one 5K display. A game in the MuMuPlayer Android emulator, rendered at
+  3840×2160 and 120 fps.
+- One sample a second for 180 s (178 rows): `GPUPH` residencies weighted step by step
+  (not by the average clock), GPU watts from "GPU Energy", and the driver's
+  `Device Utilization %`. Power share is GPU watts ÷ 84 W (`stress.swift` full load).
+  V²·f uses one of the chip's four voltage tables (645 … 1075 mV).
+- Segments set by eye from the clock and power curves: baseline 0–14 s, loading
+  25–104 s, play 105–167 s.
 
-复现：`python3 game-4k120-summary.py game-4k120-samples.csv 105 167 25`（另两种分法把 `105 167` 换成 `68 104` 或 `68 167`）。
+## Result
 
-## 结果
+Means (medians in brackets).
 
-均值（中位数在括号里）。
+| Segment | Rows | Busy % | MHz while busy | Driver % | Clock-weighted % | V²·f % | Power share % | GPU W | Clock-weighted ÷ power | V²·f ÷ power |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Baseline | 13 | 38.7 | 341 | 43.2 | 8.1 | 2.9 | 1.0 | 0.8 | 8.1× | 2.9× |
+| Loading | 79 | 52.0 | 920 | 47.1 | 29.6 | 18.7 | 6.5 | 5.4 | 4.6× | 2.9× |
+| Play | 61 | 58.6 | 1171 (1201) | 49.9 | 42.1 (42.5) | 33.9 | 12.0 | 10.1 | 3.5× | 2.8× |
 
-| 段 | 行数 | 忙碌 % | 忙碌时 MHz | 驱动 % | 新算法 % | V²·f % | 功耗占比 % | GPU W | 新算法 ÷ 功耗 | V²·f ÷ 功耗 | 驱动 ÷ 功耗 |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| 基线 0–14 秒 | 13 | 38.7 (43.3) | 341 | 43.2 | 8.1 (9.1) | 2.9 | 1.0 | 0.8 | 8.1× | 2.9× | 43× |
-| 加载 25–104 秒 | 79 | 52.0 (53.2) | 920 | 47.1 | 29.6 (29.7) | 18.7 | 6.5 | 5.4 | 4.6× | 2.9× | 7.3× |
-| 游戏 105–167 秒 | 61 | 58.6 (58.6) | 1171 (1201) | 49.9 | 42.1 (42.5) | 33.9 (34.5) | 12.0 (11.7) | 10.1 | 3.5× | 2.8× | 4.2× |
-| 68–104 秒（另列） | 35 | 53.0 | 961 | 49.5 | 31.5 | 20.1 | 7.5 | 6.3 | 4.2× | 2.7× | 6.6× |
-| 68–167 秒（合并） | 97 | 56.5 | 1096 | 49.7 | 38.2 | 28.9 | 10.4 | 8.7 | 3.7× | 2.8× | 4.8× |
+During play the clock-weighted figure ranged 27.3–53.6 % and power share 3.1–32.4 %.
+Single-second watts swing widely (2.6 W then 27.2 W), so only segment means are
+compared.
 
-游戏段的最小到最大：
+The clock did not settle: 36.4 % of busy time was at the top step (1620 MHz) and about
+26 % at the lowest three (338–636 MHz), apparently rising each frame and dropping
+between frames.
 
-| 量 | 范围 |
-|---|---|
-| 忙碌 | 50.9–67.0% |
-| 忙碌时频率 | 713–1475 MHz |
-| 新算法 | 27.3–53.6% |
-| V²·f | 15.1–52.5% |
-| 功耗占比 | 3.1–32.4% |
+## Against the panel and `probe`
 
-倍数是两边均值之比。单秒功耗波动大（游戏段标准差 3.3 W，例如 114 秒 2.6 W，下一秒 27.2 W），
-所以逐行算倍数没有意义，只看段均值。
+- `ftop probe --json` at 115 s: usage 45.9 %, busy 55.7 %, 1335 MHz, source
+  `clockWeighted`, 12.6 W. The panel's 45 % falls inside the play segment's range.
+- The driver's `Device Utilization %` read 0 six times while `GPUPH` showed 32–62 %
+  busy; `GPUPH` never did.
 
-### 游戏段各档的忙碌时间分布
+## Observations
 
-| 档 | MHz | mV | 占忙碌时间 |
-|---|---|---|---|
-| P1 | 338 | 645 | 9.7% |
-| P2 | 486 | 655 | 7.1% |
-| P3 | 636 | 675 | 9.5% |
-| P4 | 796 | 730 | 4.0% |
-| P5 | 888 | 740 | 3.0% |
-| P6 | 988 | 780 | 4.0% |
-| P7 | 1084 | 805 | 4.6% |
-| P8 | 1182 | 830 | 4.6% |
-| P9 | 1278 | 880 | 4.3% |
-| P10 | 1374 | 905 | 3.9% |
-| P11 | 1470 | 960 | 5.2% |
-| P12 | 1578 | 1040 | 3.9% |
-| P13 | 1620 | 1075 | 36.4% |
+Clock-weighted ÷ power share falls as the clock rises (8.1× at 338 MHz, 3.5× near
+1.2 GHz); V²·f ÷ power share stays at 2.7–2.9× in every segment. The constant that
+remains is consistent with not every core working fully, which no counter reports
+(`ut-aggd.md`).
 
-时钟不稳定在某一档。主要是两头：最高档 P13 占 36%，最低三档 P1–P3 合计约 26%。看起来是每帧升到
-最高频，帧与帧之间再回到低频。68–104 秒那段主要在 P4–P8（796–1182 MHz）。
+## Limits
 
-## 和面板、probe 的对照
-
-- 115.4 秒的开发版 `ftop probe --json`：
-  - usage 45.9%，忙碌 55.7%，频率 1335 MHz，来源 `clockWeighted`；
-  - GPU 12.6 W。
-- K Xie 在面板上看到 45%、12.7 W、频率线约 79%（约 1.28 GHz），落在游戏段的范围内：
-  - 新算法均值 42.1%，最大 53.6%；
-  - 忙碌时频率中位数 1201 MHz；
-  - 瓦数均值 10.1 W。
-
-  面板读数是准的，符合新算法的定义。
-- 驱动的 `Device Utilization %` 在硬件忙碌 32–62% 时 6 次读成 0（48.6、49.6、50.6、56.7、130.6、131.6 秒），
-  和 handoff §3.4 的现象一致；GPUPH 没有出现这种情况。
-
-## 观察
-
-- 新算法 ÷ 功耗占比随时钟变化：基线 338 MHz 时 8.1×，加载约 0.9 GHz 时 4.6×，游戏约 1.2 GHz 时 3.5×。
-  V²·f ÷ 功耗占比在四段里都在 2.7–2.9× 之间。
-- 也就是说，在这组数据里 V²·f 和功耗大致成固定比例，新算法和功耗的比例则随时钟变化。剩下的约
-  2.8 倍和时钟、电压无关，符合"不是所有核心都在满负荷工作"的解释（核心维度读不到，见 [ut-aggd.md](ut-aggd.md)）。
-- 这里只记录观察，不做结论；文档怎么写由 K Xie 和主会话决定。
-
-## 局限
-
-- 只有一款游戏、一种设置（4K、120 帧）、一次录制，一台显示器。
-- 分段边界是看曲线人工定的；游戏段起点取 105 秒，选 68 秒时数字见"另列"和"合并"两行。
-- 电压表是芯片四套表中的一套（由主会话给定），其他三套没比较。
-- 满载 84 W 来自纯 FMA 计算负载；图形负载的满载功耗可能不同，功耗占比会随之变。
-- GPU 瓦数来自 IOReport "GPU Energy" 的每秒差值，单秒波动大，只适合看段均值。
-- 基线包括 MuMu 开着时的桌面合成（忙碌 38.7%，338 MHz），不是完全空闲。
+One game, one setting, one recording, one display; segment edges set by eye; one of
+four voltage tables; the 84 W full load comes from a compute load; the baseline
+includes the emulator's compositing.

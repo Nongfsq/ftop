@@ -561,10 +561,10 @@ palettes with that name. It extends "The menu bar item: one reading" above and r
 - Still open: whether the menu should stay open while several readings are picked (a
   system menu closes after each pick).
 
-## GPU usage is busy time weighted by clock (2026-10-31, approved by delegation)
+## GPU usage is busy time weighted by clock (2026-10-31)
 
-- Approved by the owner's delegation to the contributor who found it and measured it:
-  the GPU figure read high at rest on their Mac. Evidence in
+- Approved by the owner on 2026-10-31 in pull request 30. The contributor who proposed
+  it found the GPU figure high at rest on their Mac and measured it. Evidence in
   `docs/evidence/2026-10-28-gpu-usage/`.
 - The GPU's usage is the share of its peak throughput in use: for each performance
   state, the time in it times its clock, summed, over the interval times the top clock
@@ -588,11 +588,17 @@ palettes with that name. It extends "The menu bar item: one reading" above and r
   unavailable, never 0. Busy share 0 with the table known is a true 0. During the game
   recording the driver's `Device Utilization %` read 0 six times while the hardware was
   32–62 % busy; `GPUPH` never did.
-- The hover gains the busy share, only when it differs from the figure:
-  `GPU 10 % · busy 37 % · 0.34 GHz · 0.9 W · VRAM 1.4 GB · 56°`. Nothing else on the
-  panel changes; the menu bar reading follows the figure.
+- A state past the table (the M6 lists P14 and P15 against 13 values): an interval that
+  ran in one has no clock, so it shows the busy share, which is never below the
+  clock-weighted figure, and the next interval goes back. The figure can step up for
+  that one sample. `GPUUsageTests` pins this.
+- Nothing on the panel changes but the figure; the menu bar reading follows it. The
+  hover does not show the busy share: on an M4 Pro at rest the `GPUPH` non-idle share
+  read 43–68 % while the driver's `Device Utilization %` averaged 12.7 %, so it is not
+  the number Activity Monitor shows on every chip, and beside a low figure it reads as
+  alarming. `ftop probe` and `probe --json` print it.
 - The word stays "usage". Activity Monitor and `nvidia-smi` show busy time, so the
-  numbers differ from theirs; the hover's busy share is their number.
+  numbers differ from theirs.
 - Known gaps, accepted, measured on the contributor's M5 Max (full load 84 W):
   - Lowest clock at rest: the window server compositing a 5K display at 338 MHz reads
     7–10 % (busy 34–44 %) at about 0.8 W, 1 % of full-load power; about 8× the power
@@ -610,7 +616,7 @@ palettes with that name. It extends "The menu bar item: one reading" above and r
     cores busy, which no readable counter reports (`ut-aggd.md`). Evidence:
     `game-4k120.md`.
 - Not done: the CPU core columns keep their time-share definition; the GPU column is
-  the one column with the clock-weighted one, and the hover says so.
+  the one column with the clock-weighted one, and the README says so.
 
 ## Rejected by the owner (do not reintroduce)
 

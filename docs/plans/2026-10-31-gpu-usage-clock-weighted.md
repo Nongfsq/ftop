@@ -1,13 +1,14 @@
 # Plan: GPU usage is busy time weighted by clock (2026-10-31)
 
-Status: ready. Written for an implementer who has not seen the discussion; everything
-needed is here or at the paths named. Task IDs `GPU-001` … are new; the repository
+Status: done; merged in pull request 30. The maintainer's changes before the merge are
+listed at the end. Written for an implementer who had not seen the discussion. Task IDs `GPU-001` … are new; the repository
 had no task ledger before this plan.
 
 ## Readiness and sources
 
-- Product and design decision: made 2026-10-31 by K Xie (contributor, delegated by the
-  owner, who said a better reading may be built and explained in the pull request).
+- Product and design decision: proposed 2026-10-31 by the contributor, after the owner
+  said a better reading may be built and explained in a pull request; approved by the
+  owner on 2026-10-31 in pull request 30.
   Its text is in "Decision to record" below; `GPU-007` writes it into
   `docs/product/2026-10-06-floating-panel-decision.md`. The approved layout rule it
   builds on is that file's amendment "the GPU has a column of its own" (2026-10-09):
@@ -19,8 +20,8 @@ had no task ledger before this plan.
 - Evidence: `docs/evidence/2026-10-28-gpu-usage/handoff.md` (34 hours of samples, a
   full-load run, the numbers behind the decision) and `ut-aggd.md` in the same folder
   (why the remaining gap to power cannot be closed: no counter reports how many GPU
-  cores are busy, as a normal user or as root). That folder is untracked in the owner's
-  checkout at `/Users/shek/Documents/Projects/ftop`; `GPU-001` brings it into the branch.
+  cores are busy, as a normal user or as root). `GPU-001` brought it into the branch; the
+  raw samples and probes were left out at the merge (see the end).
 - Repository rules: `AGENTS.md`; profile `docs/agents/project-profile.md` (check gate
   `scripts/check.sh`, reference images, English docs, `feat:` commits).
 - Experience spec, confirmed-understanding IDs, scaffold, prototype: N/A — this project
@@ -140,14 +141,14 @@ memory. Reason: the driver's field is blind to clock and reads a false 0 at time
 
 ### GPU-001: Branch from `main` with the evidence folder
 
-- Status: pending
+- Status: done
 - Depends on: none
 - Files: new worktree on branch `feat/gpu-usage-clock-weighted` cut from `main`
   (`a318876` or later); `docs/evidence/2026-10-28-gpu-usage/` (copy, all files);
   `docs/plans/2026-10-31-gpu-usage-clock-weighted.md` (copy, this file).
 - Change: Cut the branch from `main`, not from `fix/power-state-crash` (that checkout's
-  current branch, with an open pull request). Copy the two untracked paths from
-  `/Users/shek/Documents/Projects/ftop` into the worktree and commit them as
+  current branch, with an open pull request). Copy the two untracked paths from the
+  contributor's checkout into the worktree and commit them as
   `docs: GPU usage evidence and plan`.
 - Acceptance: `git log main..HEAD` shows one commit; `git status` clean; the evidence
   folder's `handoff.md`, `ut-aggd.md`, CSVs and sources are in it.
@@ -157,7 +158,7 @@ memory. Reason: the driver's field is blind to clock and reads a false 0 at time
 
 ### GPU-002: The usage ladder as a pure function, with tests
 
-- Status: pending
+- Status: done
 - Depends on: GPU-001
 - Files: `Sources/FtopCore/Model.swift` (modify `GPUSample`),
   `Tests/FtopCoreTests/CoreTests.swift` (new suite `GPUUsageTests`).
@@ -188,7 +189,7 @@ memory. Reason: the driver's field is blind to clock and reads a false 0 at time
 
 ### GPU-003: `GPUProvider` uses the ladder and no longer needs the driver
 
-- Status: pending
+- Status: done
 - Depends on: GPU-002
 - Files: `Sources/FtopSensors/Providers.swift` (modify `GPUProvider.sample()`, about
   lines 263–296).
@@ -211,7 +212,7 @@ memory. Reason: the driver's field is blind to clock and reads a false 0 at time
 
 ### GPU-004: The hover names the busy share
 
-- Status: pending
+- Status: done
 - Depends on: GPU-002
 - Files: `Sources/FtopUI/Theme.swift` (modify `Strings.gpu`, about line 340),
   `Sources/FtopUI/SceneBuilder.swift` (doc comment at line 327 only).
@@ -230,7 +231,7 @@ memory. Reason: the driver's field is blind to clock and reads a false 0 at time
 
 ### GPU-005: `probe` and `doctor` say which usage this is
 
-- Status: pending
+- Status: done
 - Depends on: GPU-002
 - Files: `Sources/ftop/main.swift` (modify lines about 95–99 and 141).
 - Change: `probe` prints `GPU 4%, busy 37%, 0.34 GHz, …` when the source is
@@ -248,7 +249,7 @@ memory. Reason: the driver's field is blind to clock and reads a false 0 at time
 
 ### GPU-006: Validation on the real panel
 
-- Status: pending
+- Status: done
 - Depends on: GPU-003, GPU-004, GPU-005
 - Files: none in the repository; reference images to a scratch folder for review.
 - Change: Run the gate and the layout checks the decision doc requires for a change to
@@ -262,13 +263,13 @@ memory. Reason: the driver's field is blind to clock and reads a false 0 at time
   column touching its line at the top; at rest the column sits well below the line.
 - Validation: `scripts/check.sh`; `FTOP_RENDER_DIR=<scratch> swift test --filter
   RenderTests`; the manual pass above, recorded with screenshots in the scratch folder
-  and summarised in `GPU-008`. The owner's delegate (K Xie) looks at the images before
+  and summarised in `GPU-008`. The contributor looks at the images before
   the pull request opens.
 - Parallelism: not parallel; last before the docs.
 
 ### GPU-007: Decision and blueprint amendments, README clause
 
-- Status: pending
+- Status: done
 - Depends on: GPU-002
 - Files: `docs/product/2026-10-06-floating-panel-decision.md` (append the amendment
   from "Decision to record"), `docs/architecture/2026-10-06-ftop-blueprint.md` (append
@@ -285,7 +286,7 @@ memory. Reason: the driver's field is blind to clock and reads a false 0 at time
 
 ### GPU-008: Progress note
 
-- Status: pending
+- Status: done
 - Depends on: GPU-006, GPU-007
 - Files: `docs/progress/2026-10-31.md` (new).
 - Change: In the form of `docs/progress/2026-10-21.md`: what was built and why (one
@@ -300,7 +301,7 @@ memory. Reason: the driver's field is blind to clock and reads a false 0 at time
 
 ### GPU-009: Push to the fork and draft the pull request text for review
 
-- Status: pending
+- Status: done
 - Depends on: GPU-008
 - Files: none in the repository; `pr.md` in the session's scratch folder.
 - Change: Commit in conventional prefixes (`feat: GPU usage is busy time weighted by
@@ -310,14 +311,14 @@ memory. Reason: the driver's field is blind to clock and reads a false 0 at time
   body to `pr.md`: the problem (high figure at rest, with the measured numbers), the
   definition and the geometry, the fallbacks, what was rejected and why (V²·f, tables,
   the UT channels), what was checked and not, and links to the evidence folder and the
-  amendment. Do not open the pull request; show `pr.md` to K Xie and stop.
+  amendment. Do not open the pull request; show `pr.md` to the contributor and stop.
 - Acceptance: the branch is on `origin`; `pr.md` exists and is complete; no pull request
   exists yet.
 - Validation: `git log origin/feat/gpu-usage-clock-weighted -1`; `gh pr list --repo
   Nongfsq/ftop --head yume-shek:feat/gpu-usage-clock-weighted` shows none.
 - Parallelism: last. Opening the pull request (`gh pr create --repo Nongfsq/ftop --base
-  main --head yume-shek:feat/gpu-usage-clock-weighted`) happens only after K Xie
-  approves the text.
+  main --head yume-shek:feat/gpu-usage-clock-weighted`) happens only after the
+  contributor approves the text.
 
 ## Test, rollout, rollback, handoff
 
@@ -330,8 +331,25 @@ memory. Reason: the driver's field is blind to clock and reads a false 0 at time
   a state is uncovered, and `doctor` says which. Two open pull requests from the same
   fork (28, 29) may touch the decision doc's and progress folder's ends; resolve on
   merge order, nothing else overlaps.
-- Authority already granted by K Xie (2026-10-31): implement on a branch, run the
+- Authority the contributor granted (2026-10-31): implement on a branch, run the
   checks, push to `origin` only. Not granted: opening the pull request, merging,
   pushing anywhere else, `scripts/install.sh`.
 - Next executable: `GPU-001`, then `GPU-002`; then `GPU-003`, `GPU-004`, `GPU-005`,
   `GPU-007` in parallel; then `GPU-006`, `GPU-008`, `GPU-009`.
+
+## Changed by the maintainer before the merge (2026-10-31)
+
+Requested in the review of pull request 30 and made by the maintainer on the branch:
+
+- The hover no longer shows the busy share (`GPU-004` reversed). On an M4 Pro at rest
+  the `GPUPH` non-idle share read 43–68 % while the driver's `Device Utilization %`
+  averaged 12.7 %, so it is not the number Activity Monitor shows on every chip. It stays
+  in `ftop probe` and `probe --json`.
+- The decision record says the owner approved it, in pull request 30.
+- A state past the table (the M6) is pinned by a test: that interval shows the busy
+  share, and the amendment says the figure can step up for it.
+- The README says the GPU's fill is weighted by clock and the cores' is not.
+- The evidence folder keeps the English notes, `full-load.csv`, `ut-aggd-summary.csv`,
+  and `stress.swift`. The raw samples (one of them logged the foreground app), the C
+  probes that declare IOReport symbols outside `Sources/CFtopSys`, the root script, and
+  the samplers stay in the pull request's history only.
