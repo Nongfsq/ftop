@@ -107,18 +107,36 @@ public struct CPUSample: Sendable, Codable, Equatable {
     }
 }
 
+/// Where the GPU's usage figure comes from, best first.
+public enum GPUUsageSource: String, Sendable, Codable {
+    /// Busy time weighted by clock, from IOReport (`GPUPH` and `perf-states`).
+    case clockWeighted
+    /// Busy time only, from IOReport, when the clock is unknown.
+    case busyTime
+    /// Busy time from the graphics driver's `Device Utilization %`.
+    case driver
+}
+
 /// The GPU as the system reports it: one figure for all of its cores.
 public struct GPUSample: Sendable, Codable, Equatable {
-    /// 0...1 share of the last interval the GPU was busy.
+    /// 0...1 share of the GPU's peak throughput in use; see `usageSource`.
     public var usage: Double
+    /// 0...1 share of the last interval the GPU was in a non-idle state, from `GPUPH`.
+    public var busy: Reading<Double>
+    public var usageSource: GPUUsageSource
     public var frequencyMHz: Reading<Double>
     public var maxFrequencyMHz: Double?
     /// Unified memory the GPU holds. Apple Silicon has no separate video memory.
     public var memoryBytes: Reading<UInt64>
     public var temperature: Reading<Temperature>
 
-    public init(usage: Double, frequencyMHz: Reading<Double>, maxFrequencyMHz: Double?, memoryBytes: Reading<UInt64>, temperature: Reading<Temperature>) {
+    public init(
+        usage: Double, busy: Reading<Double>, usageSource: GPUUsageSource, frequencyMHz: Reading<Double>, maxFrequencyMHz: Double?,
+        memoryBytes: Reading<UInt64>, temperature: Reading<Temperature>
+    ) {
         self.usage = usage
+        self.busy = busy
+        self.usageSource = usageSource
         self.frequencyMHz = frequencyMHz
         self.maxFrequencyMHz = maxFrequencyMHz
         self.memoryBytes = memoryBytes
@@ -129,6 +147,19 @@ public struct GPUSample: Sendable, Codable, Equatable {
     public var frequencyFraction: Double? {
         guard let mhz = frequencyMHz.value, let top = maxFrequencyMHz, top > 0 else { return nil }
         return min(1, max(0, mhz / top))
+    }
+
+    /// The usage figure from the best reading there is: busy share × clock ÷ top clock,
+    /// then the busy share alone when the clock is unknown, then the driver's figure.
+    /// Busy 0 with a known table is a true 0. `nil` when none of them is known.
+    public static func usage(busy: Double?, mhz: Double?, maxMHz: Double?, driver: Double?) -> (usage: Double, source: GPUUsageSource)? {
+        if let busy, let maxMHz, maxMHz > 0 {
+            if busy == 0 { return (0, .clockWeighted) }
+            if let mhz, mhz > 0 { return (min(1, max(0, busy * mhz / maxMHz)), .clockWeighted) }
+        }
+        if let busy { return (min(1, max(0, busy)), .busyTime) }
+        if let driver { return (min(1, max(0, driver)), .driver) }
+        return nil
     }
 }
 
@@ -433,7 +464,8 @@ extension Snapshot {
             processes: .value(ProcessList(top: ProcessSample.folded(list, by: .cpu), byMemory: byMemory, coversAllUsers: true)),
             gpu: .value(
                 GPUSample(
-                    usage: 0.37, frequencyMHz: .value(620), maxFrequencyMHz: 1578, memoryBytes: .value(gigabyte * 14 / 10),
+                    usage: 0.37, busy: .value(0.94), usageSource: .clockWeighted, frequencyMHz: .value(620), maxFrequencyMHz: 1578,
+                    memoryBytes: .value(gigabyte * 14 / 10),
                     temperature: .value(Temperature(celsius: 56, source: .gpu, sensorCount: 22)))),
             power: .value(PowerSample(systemWatts: 18.6, inputWatts: .value(19.9), gpuWatts: .value(3.1)))
         )

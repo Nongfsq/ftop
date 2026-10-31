@@ -585,6 +585,63 @@ badges amendment's glyph list and "with the laptop glyph" in its corner rule.
 - The badge and the figure are placed the same for every kind, so the layout does not
   depend on it. The menu bar's power reading keeps the bolt.
 
+## GPU usage is busy time weighted by clock (2026-10-31)
+
+- Approved by the owner on 2026-10-31 in pull request 30. The contributor who proposed
+  it found the GPU figure high at rest on their Mac and measured it. Evidence in
+  `docs/evidence/2026-10-28-gpu-usage/`.
+- The GPU's usage is the share of its peak throughput in use: for each performance
+  state, the time in it times its clock, summed, over the interval times the top clock
+  (`Σ residency_i × f_i ÷ (total × f_max)`). The data is IOReport `GPUPH` and the
+  `sgx` node's `perf-states`, the same data the frequency line uses. It equals busy
+  share × frequency ÷ top frequency.
+- Why: the figure should answer "how much of the GPU is being used", not "what share
+  of the time was it awake". Watts already answer the power question in the GPU's
+  pair. Voltage was considered (V²·f) and rejected: it restates the watts, needs a
+  voltage table the chip lists four variants of, and breaks the geometry below. Windows
+  has used the clock-weighted definition for the CPU since Windows 8.
+- Geometry: the column's height is this usage and its line is frequency ÷ top
+  frequency, so the column never rises above the line, and the column touching the
+  line means 100 % busy at that clock. A column touching a line held mid-way reads
+  "saturated, clock held down" (thermal or power limit); a low line with a low column
+  reads "slow compositing". The limit signal lives in the shape, with no new element.
+- Fallbacks, in order, each named in `ftop doctor` as the temperature's sensor level
+  is: clock-weighted (`GPUPH` with a known clock) → busy share from `GPUPH` when the
+  clock is unknown (a state past the table, as on the M6, or no table) → the driver's
+  `Device Utilization %` when IOReport gives nothing. A value none of them can give is
+  unavailable, never 0. Busy share 0 with the table known is a true 0. During the game
+  recording the driver's `Device Utilization %` read 0 six times while the hardware was
+  32–62 % busy; `GPUPH` never did.
+- A state past the table (the M6 lists P14 and P15 against 13 values): an interval that
+  ran in one has no clock, so it shows the busy share, which is never below the
+  clock-weighted figure, and the next interval goes back. The figure can step up for
+  that one sample. `GPUUsageTests` pins this.
+- Nothing on the panel changes but the figure; the menu bar reading follows it. The
+  hover does not show the busy share: on an M4 Pro at rest the `GPUPH` non-idle share
+  read 43–68 % while the driver's `Device Utilization %` averaged 12.7 %, so it is not
+  the number Activity Monitor shows on every chip, and beside a low figure it reads as
+  alarming. `ftop probe` and `probe --json` print it.
+- The word stays "usage". Activity Monitor and `nvidia-smi` show busy time, so the
+  numbers differ from theirs.
+- Known gaps, accepted, measured on the contributor's M5 Max (full load 84 W):
+  - Lowest clock at rest: the window server compositing a 5K display at 338 MHz reads
+    7–10 % (busy 34–44 %) at about 0.8 W, 1 % of full-load power; about 8× the power
+    share. The clock-weighted figure counts cycles; the lowest clock is also the lowest
+    voltage, so each cycle costs less energy than the definition assumes.
+  - Graphics load at mid clock: a 4K, 120 fps game in an Android emulator reads 42 %
+    (busy 59 %, 1.17 GHz average, driver 50 %) at 10 W, 12 % of full-load power; about
+    3.5×. The clock bounced each frame between the top step and the lowest three.
+  - Why not V²·f: in these measurements V²·f stays at a fixed 2.7–2.9× of the power
+    share at every clock, so it is the better power proxy. It was still not chosen: it
+    restates the watts beside the figure, needs a voltage table the chip lists four
+    variants of (about 5 % error), and breaks the column-under-line geometry unless the
+    line also changes, which would pin the 338 MHz line at 7.5 % height and hide a clock
+    held mid-way. The constant 2.8× that remains under either definition is the share of
+    cores busy, which no readable counter reports (`ut-aggd.md`). Evidence:
+    `game-4k120.md`.
+- Not done: the CPU core columns keep their time-share definition; the GPU column is
+  the one column with the clock-weighted one, and the README says so.
+
 ## Rejected by the owner (do not reintroduce)
 
 - A processor figure larger than the figures beside it (2026-10-08): the core columns

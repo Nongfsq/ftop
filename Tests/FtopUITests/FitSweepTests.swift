@@ -126,7 +126,9 @@ import Testing
         var busy = Snapshot.sample(performance: 10, efficiency: 4)
         busy.network = .value(NetworkSample(downBytesPerSecond: 999_400_000, upBytesPerSecond: 888_800_000))
         busy.gpu = .value(
-            GPUSample(usage: 1, frequencyMHz: .unavailable("x"), maxFrequencyMHz: nil, memoryBytes: .value(88_800_000_000), temperature: .unavailable("x")))
+            GPUSample(
+                usage: 1, busy: .value(1), usageSource: .clockWeighted, frequencyMHz: .unavailable("x"), maxFrequencyMHz: nil,
+                memoryBytes: .value(88_800_000_000), temperature: .unavailable("x")))
         busy.power = .value(PowerSample(systemWatts: 888.8, inputWatts: .unavailable("x"), gpuWatts: .value(88.8)))
         // Another kind of Mac draws another picture in the same badge.
         busy.productName = "Mac Pro (2023)"
