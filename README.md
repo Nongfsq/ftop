@@ -77,6 +77,10 @@ Right-click the panel or the menu bar item. One block holds everything: what to
 show, how the panel behaves, the colors, and under **More** the few settings that have
 a value.
 
+Right-click a process row and the block starts with that process: **End** asks it to
+quit (an app can still ask to save), **Force End** stops it at once. Both ask first.
+ftop ends only your own processes, never itself or the system's.
+
 <p align="center"><img src="docs/media/settings.png" width="620" alt="The settings: a block of round switches, and the same block with More open"></p>
 
 The same settings are a plain text file, `~/.config/ftop/config.json5` (JSON with

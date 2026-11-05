@@ -158,6 +158,8 @@ public struct PanelStyle: Equatable, Sendable {
     /// A row of the list "More" opens, and the space above the list.
     static let controlListRow: CGFloat = 34
     static let controlListGap: CGFloat = 10
+    /// Above the process's name and its End and Force End, when the block is opened on a process row.
+    static let controlProcessTop: CGFloat = 10
     static let controlTitleSize: CGFloat = 13
     static let controlValueSize: CGFloat = 12
     /// Several menu bar readings are named in their row by their glyphs, this far apart.

@@ -673,6 +673,44 @@ only. Its settings window and storage reading are declined (see "no disk panels"
   nothing. Not checked on the real system: the approval path, which needs Login Items
   turned off by hand in System Settings, and a Developer ID copy.
 
+## End and Force End on a process row (2026-11-04, approved; built 2026-11-05)
+
+Approved by the owner in the reply on issue 32 (Nongfsq/ftop, 2026-11-04). A contributor's
+branch was the reference; outside pull requests are not taken, so this is ftop's own code.
+The rest of that branch (a settings window, a storage reading) was declined.
+
+- A right-click or Control-click on a process row opens the control block with the
+  process on top: its name and `PID n`, then End and Force End as text rows (Force End
+  in the critical color), then the switches as before. Opened from the background or the
+  menu bar, the block has no process. A left click still opens the card, which keeps no
+  buttons.
+- An app's row acts on the app's main process, found when the block opens among the
+  running apps by where its process runs from, not on the helper that was busiest. End
+  asks the app to quit (`NSRunningApplication.terminate`), so it can ask to save or
+  decline; Force End is `forceTerminate`. A process outside any app gets SIGTERM or
+  SIGKILL. A row of several processes inside a bundle that no running app owns has no
+  one process to ask, so it offers nothing.
+- Each action asks first: name, PID, and what will happen; Cancel is the default button,
+  and Return and Escape cancel.
+- The start time (`proc_pid_rusage`, `ri_proc_start_abstime`) is recorded when a process
+  is first sampled, beside its app path. It is checked when the block opens and again
+  after the confirmation, so a process id reused by another program is never signalled.
+  Never signalled either: PID 1 and below (the kernel, launchd, and a process group),
+  ftop itself, and another user's process (real or effective user not the user's).
+- Refused: End and Force End are dimmed and End's row says why in a few words (ftop
+  itself, System process, Another user's, Has exited, No longer this process, No main
+  process). A refusal after confirmation is said in an alert.
+- No admin rights: `ftop-helper` stays read-only and unchanged, and with a granted helper
+  the list shows other users' processes that ftop still will not end.
+- The rules are `ProcessControlPolicy` in `Sources/FtopCore/ProcessControl.swift`; the
+  system calls are `ProcessControl` in `Sources/FtopSensors/ProcessControl.swift`; the
+  confirmation is `Sources/FtopApp/ProcessEnding.swift`.
+- Limits, accepted: between the last check and the signal there is a window of
+  microseconds in which the id could be reused; macOS has no process handle to close it.
+  The start time is cached per process id and name, so a program that exits and comes
+  back under the same id and name within one sample reads as "No longer this process"
+  until its id leaves the list. Those refuse; they never signal the wrong process.
+
 ## Rejected by the owner (do not reintroduce)
 
 - A processor figure larger than the figures beside it (2026-10-08): the core columns
