@@ -1,12 +1,14 @@
 #!/bin/bash
-# Builds the release archive: Ftop.app signed with the Developer ID, notarized by
-# Apple, the ticket stapled, zipped as build/Ftop-<version>-arm64.zip.
+# Builds the release files: Ftop.app signed with the Developer ID, notarized by
+# Apple, the ticket stapled, zipped as build/Ftop-<version>-arm64.zip (the updater
+# downloads this one), and the same app in a drag-to-Applications disk image,
+# build/Ftop-<version>-arm64.dmg, itself signed, notarized, and stapled.
 #
 # Needs, once per Mac:
 #   the "Developer ID Application" certificate in the login keychain, and
 #   xcrun notarytool store-credentials ftop --apple-id <id> --team-id YHQ2HJF58N
 # (asks for an app-specific password from account.apple.com and keeps it in the
-# keychain). Publishing the archive is a separate, manual step.
+# keychain). Publishing the files is a separate, manual step.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -19,6 +21,7 @@ FTOP_SIGN_IDENTITY="$identity" scripts/bundle.sh
 app="build/Ftop.app"
 version="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$app/Contents/Info.plist")"
 zip="build/Ftop-$version-arm64.zip"
+dmg="build/Ftop-$version-arm64.dmg"
 codesign --verify --deep --strict -R="anchor apple generic and certificate leaf[subject.OU] = \"$team\"" "$app"
 
 # Apple takes a zip; the ticket is then stapled to the app so Gatekeeper can check it
@@ -31,5 +34,8 @@ rm -f "$zip"
 ditto -c -k --keepParent "$app" "$zip"
 
 spctl --assess --type execute --verbose "$app"
-echo "Built $zip"
-shasum -a 256 "$zip"
+
+scripts/dmg.sh "$app" "$dmg" "$identity" "$profile"
+
+echo "Built $zip and $dmg"
+shasum -a 256 "$zip" "$dmg"
