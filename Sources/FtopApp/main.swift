@@ -78,7 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func startUpdates() {
         updater.mode = model.config.updates
         updater.onChange = { [weak self] in
-            guard let self else { return }
+            guard let self, self.control.isShown else { return }
             self.control.refresh(self.controlState)
         }
         updater.willRelaunch = { [weak self] in
@@ -519,6 +519,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         control.onQuit = { [weak self] in self?.quit() }
         control.onOpenFile = { [weak self] in self?.openConfig() }
         control.onUpdate = { [weak self] in self?.updateButtonPressed() }
+        control.onLoginItem = { [weak self] in self?.loginItemPressed() }
         control.onEndProcess = { [weak self] force in self?.ending.end(force: force) }
         return control
     }()
@@ -533,7 +534,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             if shown.contains(.network), snapshot.network.value == nil { unreadable.insert(.network) }
         }
         return ControlPanel.State(
-            config: model.config, panelVisible: panel?.isVisible ?? true, unreadable: unreadable, updateStatus: updateStatus, updateAction: updateAction)
+            config: model.config, panelVisible: panel?.isVisible ?? true, unreadable: unreadable, updateStatus: updateStatus, updateAction: updateAction,
+            loginItem: LoginItem.state)
+    }
+
+    /// Only this click registers or unregisters the app; nothing does it on its own. A
+    /// registration that waits for the user's approval opens Login Items, where they give it.
+    private func loginItemPressed() {
+        let before = LoginItem.state
+        let after: LoginItemState
+        switch before {
+        case .off, .on:
+            let result = LoginItem.set(before == .off)
+            after = result.state
+            if let error = result.error {
+                log.error("login item: \(before == .off ? "register" : "unregister", privacy: .public) failed: \(error, privacy: .public)")
+            }
+        case .needsApproval:
+            after = before
+        case .notInstalled, .unknown:
+            return
+        }
+        log.info("login item: \(String(describing: before), privacy: .public) -> \(String(describing: after), privacy: .public)")
+        if after == .needsApproval {
+            control.dismiss()
+            LoginItem.openSettings()
+        } else {
+            control.refresh(controlState)
+        }
     }
 
     private let ending = ProcessEnding()
@@ -562,7 +590,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         applyFloating()
         updateStatusItem()
         updater.mode = config.updates
-        control.refresh(controlState)
+        if control.isShown { control.refresh(controlState) }
         if layoutChanged { relayout() } else { model.render() }
         updateSampling(restart: needsRestart)
     }

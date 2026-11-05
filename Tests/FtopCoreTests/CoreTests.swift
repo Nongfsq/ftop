@@ -486,3 +486,20 @@ import Testing
         }
     }
 }
+
+@Suite struct LoginItemTests {
+    private let folders = [URL(fileURLWithPath: "/Applications"), URL(fileURLWithPath: "/Users/someone/Applications")]
+
+    @Test func offeredOnlyInApplications() {
+        #expect(LoginItemState.isInstalled(URL(fileURLWithPath: "/Applications/Ftop.app"), in: folders))
+        #expect(LoginItemState.isInstalled(URL(fileURLWithPath: "/Users/someone/Applications/Ftop.app"), in: folders))
+        #expect(LoginItemState.isInstalled(URL(fileURLWithPath: "/Applications/Utilities/Ftop.app"), in: folders))
+        #expect(!LoginItemState.isInstalled(URL(fileURLWithPath: "/Users/someone/Downloads/Ftop.app"), in: folders))
+        #expect(!LoginItemState.isInstalled(URL(fileURLWithPath: "/Volumes/Ftop/Ftop.app"), in: folders))
+        // A folder whose name only starts the same, and a translocated copy.
+        #expect(!LoginItemState.isInstalled(URL(fileURLWithPath: "/ApplicationsOld/Ftop.app"), in: folders))
+        #expect(!LoginItemState.isInstalled(URL(fileURLWithPath: "/private/var/folders/xy/AppTranslocation/1234/d/Ftop.app"), in: folders))
+        // A bare executable, as `swift run` starts it, is not an app.
+        #expect(!LoginItemState.isInstalled(URL(fileURLWithPath: "/Applications/ftop/.build/debug"), in: folders))
+    }
+}

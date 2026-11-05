@@ -17,13 +17,19 @@ public final class ControlPanel: NSObject {
         public var updateStatus: String
         /// What the update action does now: check, or install what was found.
         public var updateAction: String
+        /// Whether the app opens at login, as the system reported it just now.
+        public var loginItem: LoginItemState
 
-        public init(config: Config, panelVisible: Bool = true, unreadable: Set<ModuleID> = [], updateStatus: String = "", updateAction: String = "") {
+        public init(
+            config: Config, panelVisible: Bool = true, unreadable: Set<ModuleID> = [], updateStatus: String = "", updateAction: String = "",
+            loginItem: LoginItemState = .off
+        ) {
             self.config = config
             self.panelVisible = panelVisible
             self.unreadable = unreadable
             self.updateStatus = updateStatus
             self.updateAction = updateAction
+            self.loginItem = loginItem
         }
     }
 
@@ -49,6 +55,8 @@ public final class ControlPanel: NSObject {
     public var onQuit: (() -> Void)?
     public var onOpenFile: (() -> Void)?
     public var onUpdate: (() -> Void)?
+    /// The "Open at login" row was clicked; the app asks the system and refreshes the block.
+    public var onLoginItem: (() -> Void)?
 
     private let window = ControlWindow()
     private let face: ControlFace
@@ -77,6 +85,7 @@ public final class ControlPanel: NSObject {
                 dismiss()
                 onOpenFile?()
             case .update: onUpdate?()
+            case .loginItem: onLoginItem?()
             case .endProcess(let force):
                 dismiss()
                 onEndProcess?(force)
@@ -239,13 +248,13 @@ private final class ControlWindow: NSPanel {
 @MainActor
 final class ControlFace: NSView {
     enum Action {
-        case togglePanel, quit, openFile, update
+        case togglePanel, quit, openFile, update, loginItem
         case endProcess(force: Bool)
     }
 
     private enum Item: Hashable {
         case module(ModuleID), floating, menuBar, motion, panel, quit, palette(PaletteID), resizeEdges, more
-        case shows, interval, rows, language, updates, file
+        case shows, interval, rows, language, updates, login, file
         case process, end, forceEnd
     }
 
@@ -318,7 +327,7 @@ final class ControlFace: NSView {
         ]
     }
 
-    private static let listed: [Item] = [.shows, .interval, .rows, .language, .updates, .file]
+    private static let listed: [Item] = [.shows, .interval, .rows, .language, .updates, .login, .file]
     /// Above the switches when the block was opened on a process row.
     private static let processRows: [Item] = [.process, .end, .forceEnd]
 
@@ -397,6 +406,7 @@ final class ControlFace: NSView {
         case .rows: Strings.pick("Process rows, up to", "进程行数上限")
         case .language: Strings.pick("Language", "语言")
         case .updates: Strings.pick("Updates", "更新")
+        case .login: Strings.pick("Open at login", "登录时打开")
         case .file: Strings.pick("Open settings file", "打开设置文件")
         case .process: process?.name ?? ""
         case .end: Strings.pick("End", "结束")
@@ -450,10 +460,35 @@ final class ControlFace: NSView {
         case .rows: "\(config.maxProcesses)  ›"
         case .language: Self.name(of: config.language) + "  ›"
         case .updates: updatesValue + "  ›"
+        case .login: loginValue
         case .file: "↗"
         case .process: process.map { "PID \($0.pid)" } ?? ""
         case .end: process?.refusal ?? ""
         default: ""
+        }
+    }
+
+    /// What the system says, not what was last asked for. Only an app in Applications
+    /// can be registered, so elsewhere the row says where to put it.
+    private var loginValue: String {
+        switch state.loginItem {
+        case .off: Strings.pick("Off", "关")
+        case .on: Strings.pick("On", "开")
+        case .needsApproval: Strings.pick("Needs approval  ↗", "待允许  ↗")
+        case .notInstalled: Strings.pick("Move to Applications first", "需先移到“应用程序”")
+        case .unknown: Strings.pick("Unavailable", "不可用")
+        }
+    }
+
+    /// True for a row that cannot be used now; it is dimmed and a click does nothing.
+    private func idle(_ item: Item) -> Bool {
+        switch item {
+        // What the menu bar shows has no effect while the menu bar item is off.
+        case .shows: !config.menuBar
+        case .login: state.loginItem == .notInstalled || state.loginItem == .unknown
+        // A process that may not be ended offers no action.
+        case .end, .forceEnd: !processActionable
+        default: false
         }
     }
 
@@ -696,13 +731,14 @@ final class ControlFace: NSView {
                 entry.label.foregroundColor = (strong ? PanelStyle.inkColor : PanelStyle.secondaryColor).cgColor
             }
             for row in rows {
-                // What the menu bar shows has no effect while the menu bar item is off; a
-                // process that may not be ended offers no action.
-                let idle = (row.item == .shows && !config.menuBar) || ([.end, .forceEnd].contains(row.item) && !processActionable)
-                row.highlight.opacity = hovered == row.item && !idle && row.item != .process ? 1 : 0
-                // The reason stays readable beside its dimmed action.
-                row.title.opacity = idle ? PanelStyle.controlDimOpacity : 1
-                row.value.opacity = idle && row.item != .end ? PanelStyle.controlDimOpacity : 1
+                let dimmed = idle(row.item)
+                // The process's name is a heading, not something to press.
+                row.highlight.opacity = hovered == row.item && !dimmed && row.item != .process ? 1 : 0
+                row.title.opacity = dimmed ? PanelStyle.controlDimOpacity : 1
+                // Where to put the app, or why a process may not be ended, is the one thing
+                // the row says then; it stays readable.
+                let explains = (row.item == .login && state.loginItem == .notInstalled) || row.item == .end
+                row.value.opacity = dimmed && !explains ? PanelStyle.controlDimOpacity : 1
                 row.glyphs.opacity = row.value.opacity
             }
         }
@@ -794,11 +830,12 @@ final class ControlFace: NSView {
             build()
             onResize?()
         case .file: onAction?(.openFile)
-        case .shows: if config.menuBar { choose(item) }
+        case .login: if !idle(item) { onAction?(.loginItem) }
+        case .shows: if !idle(item) { choose(item) }
         case .interval, .rows, .language, .updates: choose(item)
         case .process: return
-        case .end: if processActionable { onAction?(.endProcess(force: false)) }
-        case .forceEnd: if processActionable { onAction?(.endProcess(force: true)) }
+        case .end: if !idle(item) { onAction?(.endProcess(force: false)) }
+        case .forceEnd: if !idle(item) { onAction?(.endProcess(force: true)) }
         }
     }
 

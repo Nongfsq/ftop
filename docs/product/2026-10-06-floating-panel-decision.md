@@ -642,6 +642,37 @@ badges amendment's glyph list and "with the laptop glyph" in its corner rule.
 - Not done: the CPU core columns keep their time-share definition; the GPU column is
   the one column with the clock-weighted one, and the README says so.
 
+## Open at login (2026-11-05, approved and built)
+
+Approved by the owner in issue 32 on 2026-11-04 as an opt-in switch. A contributor's
+branch (lanstar128/ftop, `feat/process-control-login-storage`) was read as a reference
+only. Its settings window and storage reading are declined (see "no disk panels").
+
+- One row under "More", "Open at login" ("登录时打开"), between "Updates" and "Open
+  settings file". This is the name macOS uses in Login Items. The closed block is unchanged.
+- It is the system's registration of the app itself (`SMAppService.mainApp`), with no
+  helper and no launch agent file. The state is read from the system each time the
+  block is shown or refreshed, never written to the settings file, so turning it off in
+  System Settings shows here too.
+- Off by default. Only a click on the row registers or unregisters the app: nothing does
+  it at launch, on update, or from the settings file.
+- The row's value is what the system reports after the call, not that the call
+  returned: "Off", "On", "Needs approval ↗", "Unavailable" for a status ftop does not
+  know. A click with "Needs approval" opens Login Items. So does a registration that
+  comes back needing approval, and then the block is put away.
+- Offered only to a copy in /Applications or ~/Applications (subfolders count, links
+  are followed). Anywhere else (Downloads, a disk image, a translocated copy, a build
+  folder) the title is dimmed, the row does nothing, and the value says "Move to
+  Applications first" ("需先移到“应用程序”"), left readable because it is the one thing the
+  row says then. This fits the row's 150 pt beside the title in English.
+- A click with the row on or off goes straight through, with no menu: the value has no
+  "›" because there is nothing to pick.
+- Checked on an ad-hoc signed copy in ~/Applications (2026-11-05): off → on → off, each
+  matching the system's own login item record (`sfltool dumpbtm`: enabled, then
+  disabled). The same copy outside Applications read "not installed" and a click did
+  nothing. Not checked on the real system: the approval path, which needs Login Items
+  turned off by hand in System Settings, and a Developer ID copy.
+
 ## End and Force End on a process row (2026-11-04, approved; built 2026-11-05)
 
 Approved by the owner in the reply on issue 32 (Nongfsq/ftop, 2026-11-04). A contributor's

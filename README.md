@@ -157,6 +157,13 @@ or *Never check* (ftop never goes online). `ftop update` looks right now and
 An update never changes the helper that `sudo ftop grant` installed. If a new version
 needs a newer helper, `ftop doctor` says so and you grant again.
 
+### Open at login
+
+Off until you turn it on under **More → Open at login**. It works for a copy in
+Applications (`/Applications` or `~/Applications`); elsewhere the row says to move it
+there first. If macOS asks you to allow it, the row says *Needs approval* and a click
+opens Login Items in System Settings.
+
 ### System processes
 
 Without extra rights macOS only lets ftop see your own processes. To include system
