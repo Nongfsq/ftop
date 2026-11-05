@@ -186,7 +186,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         canvas.onTogglePin = { [weak self] in self?.toggleFloating() }
         canvas.onHide = { [weak self] in self?.hidePanel() }
         canvas.onSort = { [weak self] sort in self?.setProcessSort(sort) }
-        canvas.onContextMenu = { [weak self] point in self?.showControl(at: point) }
+        canvas.onContextMenu = { [weak self] point, key in self?.showControl(at: point, processKey: key) }
         canvas.onEdgeDrag = { [weak self] edges in self?.resize(from: edges) }
         halo.onEdgeDrag = { [weak self] edges in self?.resize(from: edges) }
         glass.addSubview(canvas)
@@ -519,6 +519,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         control.onQuit = { [weak self] in self?.quit() }
         control.onOpenFile = { [weak self] in self?.openConfig() }
         control.onUpdate = { [weak self] in self?.updateButtonPressed() }
+        control.onEndProcess = { [weak self] force in self?.ending.end(force: force) }
         return control
     }()
 
@@ -535,8 +536,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             config: model.config, panelVisible: panel?.isVisible ?? true, unreadable: unreadable, updateStatus: updateStatus, updateAction: updateAction)
     }
 
-    private func showControl(at point: NSPoint) {
-        control.show(controlState, at: point)
+    private let ending = ProcessEnding()
+
+    /// Opened on a process row, the block starts with that process's End and Force End.
+    private func showControl(at point: NSPoint, processKey: String? = nil) {
+        var process: ControlPanel.ProcessContext?
+        if let processKey, let list = model.snapshot?.processes.value, let sample = (list.top + list.byMemory).first(where: { $0.id == processKey }) {
+            process = ending.context(for: sample)
+        } else {
+            ending.clear()
+        }
+        control.show(controlState, at: point, process: process)
     }
 
     private func apply(_ config: Config) {

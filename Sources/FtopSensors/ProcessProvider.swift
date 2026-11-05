@@ -52,9 +52,10 @@ final class ProcessProvider {
             let seconds = Double(elapsed) / 1_000_000_000
             func samples(_ rows: [Row], by sort: ProcessSort) -> [ProcessSample] {
                 let list = rows.prefix(limit).map {
-                    ProcessSample(
+                    let known = lookUp($0.pid, named: $0.name)
+                    return ProcessSample(
                         pid: $0.pid, name: $0.name, cpuPercent: Double($0.cpu) / (seconds * 1_000_000_000) * 100, memoryBytes: $0.memory,
-                        appPath: appPath(of: $0.pid, named: $0.name))
+                        appPath: known.path, startTime: known.start)
                 }
                 return ProcessSample.folded(list, by: sort)
             }
@@ -84,24 +85,24 @@ final class ProcessProvider {
             guard let before = previous[row.pid],
                 let percent = Metrics.cpuPercent(previousNanoseconds: before, currentNanoseconds: row.cpu, seconds: seconds)
             else { continue }
+            let known = lookUp(row.pid, named: row.name)
             samples.append(
-                ProcessSample(pid: row.pid, name: row.name, cpuPercent: percent, memoryBytes: row.memory, appPath: appPath(of: row.pid, named: row.name)))
+                ProcessSample(pid: row.pid, name: row.name, cpuPercent: percent, memoryBytes: row.memory, appPath: known.path, startTime: known.start))
         }
         samples.sort { $0.cpuPercent != $1.cpuPercent ? $0.cpuPercent > $1.cpuPercent : $0.memoryBytes > $1.memoryBytes }
         return .value(ProcessList(top: ProcessSample.folded(Array(samples.prefix(limit)), by: .cpu), coversAllUsers: privileged, helperOutdated: true))
     }
 
-    /// The app each listed process belongs to, looked up once per process. The name is
-    /// kept beside it because a process id can be reused by another program.
-    private var apps: [Int32: (name: String, path: String?)] = [:]
+    /// The app each listed process belongs to and when it started, looked up once per
+    /// process. The name is kept beside them because a process id can be reused by another
+    /// program. The start time lets End refuse a process that is not the one shown.
+    private var apps: [Int32: (name: String, path: String?, start: UInt64?)] = [:]
 
-    private func appPath(of pid: Int32, named name: String) -> String? {
-        if let known = apps[pid], known.name == name { return known.path }
-        var buffer = [CChar](repeating: 0, count: 4096)
-        let length = proc_pidpath(pid, &buffer, UInt32(buffer.count))
-        let path = length > 0 ? ProcessSample.appPath(ofExecutable: buffer.withUnsafeBufferPointer { String(cString: $0.baseAddress!) }) : nil
-        apps[pid] = (name, path)
-        return path
+    private func lookUp(_ pid: Int32, named name: String) -> (path: String?, start: UInt64?) {
+        if let known = apps[pid], known.name == name { return (known.path, known.start) }
+        let found = (path: ProcessControl.appPath(of: pid), start: ProcessControl.startTime(of: pid))
+        apps[pid] = (name, found.path, found.start)
+        return found
     }
 
     private struct Row {

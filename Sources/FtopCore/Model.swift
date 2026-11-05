@@ -272,18 +272,27 @@ public struct ProcessSample: Sendable, Codable, Equatable, Identifiable {
     public var appPath: String?
     /// The processes folded into this entry, heaviest first; empty for a single process.
     public var members: [ProcessMember]
+    /// When `pid` started, in the system's absolute time units; nil where it could not be
+    /// read. A process id can be reused, so this tells the same process from a later one.
+    public var startTime: UInt64?
 
     /// Stable while the entry stays in the list: the app, or the process.
     public var id: String { appPath ?? "pid \(pid)" }
 
-    public init(pid: Int32, name: String, cpuPercent: Double, memoryBytes: UInt64, appPath: String? = nil, members: [ProcessMember] = []) {
+    public init(
+        pid: Int32, name: String, cpuPercent: Double, memoryBytes: UInt64, appPath: String? = nil, members: [ProcessMember] = [], startTime: UInt64? = nil
+    ) {
         self.pid = pid
         self.name = name
         self.cpuPercent = cpuPercent
         self.memoryBytes = memoryBytes
         self.appPath = appPath
         self.members = members
+        self.startTime = startTime
     }
+
+    /// The process this entry's `pid` names, as it was when sampled.
+    public var identity: ProcessIdentity? { startTime.map { ProcessIdentity(pid: pid, startTime: $0) } }
 
     /// The app bundle a process at `path` belongs to: a helper inside Chrome's bundle belongs to Chrome.
     public static func appPath(ofExecutable path: String) -> String? {
@@ -310,7 +319,8 @@ public struct ProcessSample: Sendable, Codable, Equatable, Identifiable {
             return ProcessSample(
                 pid: group[0].pid, name: name.isEmpty ? group[0].name : name, cpuPercent: group.reduce(0) { $0 + $1.cpuPercent },
                 memoryBytes: group.reduce(0) { $0 + $1.memoryBytes }, appPath: path,
-                members: group.count > 1 ? group.map { ProcessMember(name: $0.name, cpuPercent: $0.cpuPercent, memoryBytes: $0.memoryBytes) } : [])
+                members: group.count > 1 ? group.map { ProcessMember(name: $0.name, cpuPercent: $0.cpuPercent, memoryBytes: $0.memoryBytes) } : [],
+                startTime: group[0].startTime)
         }
         return entries.sorted { heavier(($0.cpuPercent, $0.memoryBytes), ($1.cpuPercent, $1.memoryBytes)) }
     }

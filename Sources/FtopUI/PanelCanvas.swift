@@ -18,8 +18,9 @@ public final class PanelCanvasView: NSView {
     public var onHide: () -> Void = {}
     /// The user chose what the process list is ranked by.
     public var onSort: (ProcessSort) -> Void = { _ in }
-    /// A right-click or control-click on the panel, with the pointer's place on screen.
-    public var onContextMenu: (NSPoint) -> Void = { _ in }
+    /// A right-click or control-click on the panel, with the pointer's place on screen and,
+    /// on a process row, the row's key (`ProcessSample.id`).
+    public var onContextMenu: (NSPoint, String?) -> Void = { _, _ in }
     /// A press near an edge or corner, which resizes the panel; it returns when the press ends.
     public var onEdgeDrag: (PanelEdges) -> Void = { _ in }
     /// Near an edge or corner the pointer shows the resize cursor and a press resizes.
@@ -143,7 +144,10 @@ public final class PanelCanvasView: NSView {
     /// The panel has no menu of its own; the control block stands in for it.
     public override func menu(for event: NSEvent) -> NSMenu? {
         dismissHover()
-        onContextMenu(NSEvent.mouseLocation)
+        let point = convert(event.locationInWindow, from: nil)
+        var key: String?
+        if edges(at: point).isEmpty, case .process(let row) = scene.click(at: CGPoint(x: point.x - origin.x, y: point.y - origin.y))?.action { key = row }
+        onContextMenu(NSEvent.mouseLocation, key)
         return nil
     }
 

@@ -216,6 +216,24 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
                 backdrop.cacheDisplay(in: backdrop.bounds, to: bitmap)
                 try bitmap.representation(using: .png, properties: [:])!.write(to: directory.appending(path: "control-pinned-\(palette.rawValue).png"))
             }
+            // Opened on a process row: its name and PID, End and Force End; and a process that is refused.
+            for (name, process) in [
+                ("process", ControlPanel.ProcessContext(name: "Google Chrome", pid: 4_812)),
+                ("process-refused", ControlPanel.ProcessContext(name: "WindowServer", pid: 412, refusal: Strings.pick("Another user's", "其他用户的进程"))),
+            ] {
+                let content = ControlPanel.picture(state, expanded: false, process: process)
+                let window = NSWindow(contentRect: content.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+                window.appearance = NSAppearance(named: .darkAqua)
+                let backdrop = NSView(frame: content.frame)
+                backdrop.wantsLayer = true
+                backdrop.layer?.backgroundColor = NSColor(white: 0.16, alpha: 1).cgColor
+                backdrop.addSubview(content)
+                window.contentView = backdrop
+                window.layoutIfNeeded()
+                let bitmap = try #require(sharpBitmap(for: backdrop))
+                backdrop.cacheDisplay(in: backdrop.bounds, to: bitmap)
+                try bitmap.representation(using: .png, properties: [:])!.write(to: directory.appending(path: "control-\(language.rawValue)-\(name).png"))
+            }
             // The open block with the widest three menu bar readings, and the resize switch off.
             var three = state
             three.config.menuBarShows = [.memory, .download, .upload]

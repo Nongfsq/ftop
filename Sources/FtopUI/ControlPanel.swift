@@ -27,8 +27,24 @@ public final class ControlPanel: NSObject {
         }
     }
 
+    /// The process row the block was opened on: End and Force End act on it.
+    public struct ProcessContext: Equatable {
+        public var name: String
+        public var pid: Int32
+        /// Why neither action is offered, in a few words; nil when both are.
+        public var refusal: String?
+
+        public init(name: String, pid: Int32, refusal: String? = nil) {
+            self.name = name
+            self.pid = pid
+            self.refusal = refusal
+        }
+    }
+
     /// Called with the new settings and the one `key: value` line that changed.
     public var onChange: ((Config, String, String) -> Void)?
+    /// End (false) or Force End (true) on the process the block was opened on; the block is put away first.
+    public var onEndProcess: ((Bool) -> Void)?
     public var onTogglePanel: (() -> Void)?
     public var onQuit: (() -> Void)?
     public var onOpenFile: (() -> Void)?
@@ -61,6 +77,9 @@ public final class ControlPanel: NSObject {
                 dismiss()
                 onOpenFile?()
             case .update: onUpdate?()
+            case .endProcess(let force):
+                dismiss()
+                onEndProcess?(force)
             }
         }
     }
@@ -83,10 +102,11 @@ public final class ControlPanel: NSObject {
 
     public var isShown: Bool { window.isVisible }
 
-    /// Shows the block with its top-left corner at `point`, in screen coordinates, moved as needed to stay on screen.
-    public func show(_ state: State, at point: NSPoint) {
+    /// Shows the block with its top-left corner at `point`, in screen coordinates, moved as
+    /// needed to stay on screen. Opened on a process row, it starts with that process's actions.
+    public func show(_ state: State, at point: NSPoint, process: ProcessContext? = nil) {
         face.collapse()
-        face.apply(state)
+        face.apply(state, process: process)
         window.appearance = NSApp.effectiveAppearance
         window.setFrame(NSRect(origin: point, size: face.fittingSize), display: false)
         window.setFrameTopLeftPoint(point)
@@ -190,8 +210,9 @@ public final class ControlPanel: NSObject {
     }
 
     /// The block's contents on their own, for the reference pictures.
-    public static func picture(_ state: State, expanded: Bool) -> NSView {
+    public static func picture(_ state: State, expanded: Bool, process: ProcessContext? = nil) -> NSView {
         let face = ControlFace(state: state)
+        face.apply(state, process: process)
         if expanded { face.expand() }
         face.frame = NSRect(origin: .zero, size: face.fittingSize)
         return face
@@ -217,11 +238,15 @@ private final class ControlWindow: NSPanel {
 /// The switches and rows of the control block, as layers.
 @MainActor
 final class ControlFace: NSView {
-    enum Action { case togglePanel, quit, openFile, update }
+    enum Action {
+        case togglePanel, quit, openFile, update
+        case endProcess(force: Bool)
+    }
 
     private enum Item: Hashable {
         case module(ModuleID), floating, menuBar, motion, panel, quit, palette(PaletteID), resizeEdges, more
         case shows, interval, rows, language, updates, file
+        case process, end, forceEnd
     }
 
     private final class Disc {
@@ -253,6 +278,7 @@ final class ControlFace: NSView {
     private(set) var choosing = false
 
     private var state: ControlPanel.State
+    private var process: ControlPanel.ProcessContext?
     private var expanded = false
     private var discs: [Disc] = []
     private var rows: [Row] = []
@@ -293,11 +319,18 @@ final class ControlFace: NSView {
     }
 
     private static let listed: [Item] = [.shows, .interval, .rows, .language, .updates, .file]
+    /// Above the switches when the block was opened on a process row.
+    private static let processRows: [Item] = [.process, .end, .forceEnd]
+
+    /// How far the process's rows push the switches down.
+    private var processHeight: CGFloat {
+        process == nil ? 0 : PanelStyle.controlProcessTop + PanelStyle.controlListRow * CGFloat(Self.processRows.count)
+    }
 
     override var fittingSize: NSSize {
         let width = PanelStyle.controlPadding * 2 + PanelStyle.controlPitchX * 4 + PanelStyle.controlDisc
         let cellHeight = PanelStyle.controlDisc + PanelStyle.controlLabelGap + PanelStyle.controlLabelHeight
-        var height = PanelStyle.controlPadding + PanelStyle.controlRowPitch * 2 + cellHeight + PanelStyle.controlPadding - 4
+        var height = processHeight + PanelStyle.controlPadding + PanelStyle.controlRowPitch * 2 + cellHeight + PanelStyle.controlPadding - 4
         if expanded { height += PanelStyle.controlListRow * CGFloat(Self.listed.count) + PanelStyle.controlListGap }
         return NSSize(width: width, height: height)
     }
@@ -307,6 +340,16 @@ final class ControlFace: NSView {
         state = new
         build()
     }
+
+    func apply(_ new: ControlPanel.State, process newProcess: ControlPanel.ProcessContext?) {
+        guard new != state || newProcess != process else { return }
+        state = new
+        process = newProcess
+        build()
+    }
+
+    /// The process's actions are offered: it is the user's own, still the one shown, and not ftop.
+    private var processActionable: Bool { process != nil && process?.refusal == nil }
 
     func collapse() {
         guard expanded else { return }
@@ -355,6 +398,9 @@ final class ControlFace: NSView {
         case .language: Strings.pick("Language", "语言")
         case .updates: Strings.pick("Updates", "更新")
         case .file: Strings.pick("Open settings file", "打开设置文件")
+        case .process: process?.name ?? ""
+        case .end: Strings.pick("End", "结束")
+        case .forceEnd: Strings.pick("Force End", "强制结束")
         }
     }
 
@@ -405,6 +451,8 @@ final class ControlFace: NSView {
         case .language: Self.name(of: config.language) + "  ›"
         case .updates: updatesValue + "  ›"
         case .file: "↗"
+        case .process: process.map { "PID \($0.pid)" } ?? ""
+        case .end: process?.refusal ?? ""
         default: ""
         }
     }
@@ -449,7 +497,7 @@ final class ControlFace: NSView {
                     let column = item == .more ? 4 : index
                     let origin = CGPoint(
                         x: PanelStyle.controlPadding + CGFloat(column) * PanelStyle.controlPitchX,
-                        y: PanelStyle.controlPadding + CGFloat(rowIndex) * PanelStyle.controlRowPitch)
+                        y: processHeight + PanelStyle.controlPadding + CGFloat(rowIndex) * PanelStyle.controlRowPitch)
                     let entry = Disc(item)
                     entry.layer.frame = CGRect(origin: origin, size: CGSize(width: disc, height: disc))
                     entry.cell = CGRect(
@@ -495,41 +543,20 @@ final class ControlFace: NSView {
                 }
             }
 
+            if process != nil {
+                for (index, item) in Self.processRows.enumerated() {
+                    let y = PanelStyle.controlProcessTop + CGFloat(index) * PanelStyle.controlListRow
+                    let ink = item == .forceEnd ? PanelStyle.criticalColor : PanelStyle.inkColor
+                    rows.append(addRow(item, y: y, titleColor: ink, host: host, scale: scale))
+                }
+            }
+
             guard expanded else { return }
             let top =
-                PanelStyle.controlPadding + PanelStyle.controlRowPitch * 2 + disc + PanelStyle.controlLabelGap + PanelStyle.controlLabelHeight + PanelStyle.controlListGap
-            let width = fittingSize.width
+                processHeight + PanelStyle.controlPadding + PanelStyle.controlRowPitch * 2 + disc + PanelStyle.controlLabelGap + PanelStyle.controlLabelHeight
+                + PanelStyle.controlListGap
             for (index, item) in Self.listed.enumerated() {
-                let row = Row(item)
-                row.frame = CGRect(x: 0, y: top + CGFloat(index) * PanelStyle.controlListRow, width: width, height: PanelStyle.controlListRow)
-                row.highlight.frame = row.frame.insetBy(dx: PanelStyle.controlPadding - 10, dy: 1)
-                row.highlight.cornerRadius = 8
-                row.highlight.cornerCurve = .continuous
-                row.highlight.backgroundColor = PanelStyle.controlDiscColor.cgColor
-                row.highlight.opacity = 0
-                host.addSublayer(row.highlight)
-                let inner = row.frame.insetBy(dx: PanelStyle.controlPadding, dy: 0)
-                for (text, string, size, weight, paint) in [
-                    (row.title, label(item), PanelStyle.controlTitleSize, NSFont.Weight.medium, PanelStyle.inkColor),
-                    (row.value, value(item), PanelStyle.controlValueSize, NSFont.Weight.regular, PanelStyle.secondaryColor),
-                ] {
-                    let font = NSFont.systemFont(ofSize: size, weight: weight)
-                    text.string = string
-                    text.font = font
-                    text.fontSize = size
-                    text.foregroundColor = paint.cgColor
-                    text.contentsScale = scale
-                    text.truncationMode = .middle
-                    let height = ceil(font.ascender - font.descender)
-                    text.frame = CGRect(x: inner.minX, y: inner.midY - height / 2, width: inner.width, height: height)
-                    host.addSublayer(text)
-                }
-                // The value takes what the title leaves.
-                let titleWidth = ceil(
-                    (label(item) as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: PanelStyle.controlTitleSize, weight: .medium)]).width)
-                row.value.alignmentMode = .right
-                row.value.frame.origin.x = inner.minX + titleWidth + 12
-                row.value.frame.size.width = inner.width - titleWidth - 12
+                let row = addRow(item, y: top + CGFloat(index) * PanelStyle.controlListRow, titleColor: PanelStyle.inkColor, host: host, scale: scale)
                 if item == .shows, config.menuBarShows.count > 1 { placeGlyphs(config.menuBarShows, in: row, host: host, scale: scale) }
                 rows.append(row)
             }
@@ -537,7 +564,7 @@ final class ControlFace: NSView {
         CATransaction.commit()
         paint(animated: false)
         if expanded, !calm {
-            for row in rows {
+            for row in rows where Self.listed.contains(row.item) {
                 for part in [row.title, row.value, row.glyphs] {
                     let fade = CABasicAnimation(keyPath: "opacity")
                     fade.fromValue = 0
@@ -546,6 +573,47 @@ final class ControlFace: NSView {
                 }
             }
         }
+    }
+
+    /// A row of text across the block: its title on the left, its value on the right.
+    private func addRow(_ item: Item, y: CGFloat, titleColor: NSColor, host: CALayer, scale: CGFloat) -> Row {
+        let row = Row(item)
+        row.frame = CGRect(x: 0, y: y, width: fittingSize.width, height: PanelStyle.controlListRow)
+        row.highlight.frame = row.frame.insetBy(dx: PanelStyle.controlPadding - 10, dy: 1)
+        row.highlight.cornerRadius = 8
+        row.highlight.cornerCurve = .continuous
+        row.highlight.backgroundColor = PanelStyle.controlDiscColor.cgColor
+        row.highlight.opacity = 0
+        host.addSublayer(row.highlight)
+        let inner = row.frame.insetBy(dx: PanelStyle.controlPadding, dy: 0)
+        for (text, string, size, weight, paint) in [
+            (row.title, label(item), PanelStyle.controlTitleSize, NSFont.Weight.medium, titleColor),
+            (row.value, value(item), PanelStyle.controlValueSize, NSFont.Weight.regular, PanelStyle.secondaryColor),
+        ] {
+            let font = NSFont.systemFont(ofSize: size, weight: weight)
+            text.string = string
+            text.font = font
+            text.fontSize = size
+            text.foregroundColor = paint.cgColor
+            text.contentsScale = scale
+            text.truncationMode = .middle
+            let height = ceil(font.ascender - font.descender)
+            text.frame = CGRect(x: inner.minX, y: inner.midY - height / 2, width: inner.width, height: height)
+            host.addSublayer(text)
+        }
+        // The value takes what the title leaves; a process's name gives way to its PID.
+        let titleFont = NSFont.systemFont(ofSize: PanelStyle.controlTitleSize, weight: .medium)
+        var titleWidth = ceil((label(item) as NSString).size(withAttributes: [.font: titleFont]).width)
+        if item == .process {
+            let valueFont = NSFont.systemFont(ofSize: PanelStyle.controlValueSize, weight: .regular)
+            let valueWidth = ceil((value(item) as NSString).size(withAttributes: [.font: valueFont]).width)
+            titleWidth = min(titleWidth, inner.width - valueWidth - 12)
+            row.title.frame.size.width = titleWidth
+        }
+        row.value.alignmentMode = .right
+        row.value.frame.origin.x = inner.minX + titleWidth + 12
+        row.value.frame.size.width = inner.width - titleWidth - 12
+        return row
     }
 
     /// The menu bar's readings as the menu bar draws their glyphs, ending where a single
@@ -628,11 +696,13 @@ final class ControlFace: NSView {
                 entry.label.foregroundColor = (strong ? PanelStyle.inkColor : PanelStyle.secondaryColor).cgColor
             }
             for row in rows {
-                // What the menu bar shows has no effect while the menu bar item is off.
-                let idle = row.item == .shows && !config.menuBar
-                row.highlight.opacity = hovered == row.item && !idle ? 1 : 0
+                // What the menu bar shows has no effect while the menu bar item is off; a
+                // process that may not be ended offers no action.
+                let idle = (row.item == .shows && !config.menuBar) || ([.end, .forceEnd].contains(row.item) && !processActionable)
+                row.highlight.opacity = hovered == row.item && !idle && row.item != .process ? 1 : 0
+                // The reason stays readable beside its dimmed action.
                 row.title.opacity = idle ? PanelStyle.controlDimOpacity : 1
-                row.value.opacity = idle ? PanelStyle.controlDimOpacity : 1
+                row.value.opacity = idle && row.item != .end ? PanelStyle.controlDimOpacity : 1
                 row.glyphs.opacity = row.value.opacity
             }
         }
@@ -726,6 +796,9 @@ final class ControlFace: NSView {
         case .file: onAction?(.openFile)
         case .shows: if config.menuBar { choose(item) }
         case .interval, .rows, .language, .updates: choose(item)
+        case .process: return
+        case .end: if processActionable { onAction?(.endProcess(force: false)) }
+        case .forceEnd: if processActionable { onAction?(.endProcess(force: true)) }
         }
     }
 

@@ -19,6 +19,7 @@ let package = Package(
         .executableTarget(name: "ftop-helper"),
         .testTarget(name: "CFtopSysTests", dependencies: ["CFtopSys"]),
         .testTarget(name: "FtopCoreTests", dependencies: ["FtopCore"]),
+        .testTarget(name: "FtopSensorsTests", dependencies: ["FtopCore", "FtopSensors"]),
         .testTarget(name: "FtopUITests", dependencies: ["FtopCore", "FtopUI"]),
     ],
     swiftLanguageModes: [.v6]
