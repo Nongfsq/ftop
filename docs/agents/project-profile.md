@@ -11,7 +11,7 @@ verified: 2026-10-06 · owner rules: AGENTS.md · status tokens: off
 ## Commands
 - check (the gate): `scripts/check.sh` (source: scripts/check.sh)
 - build and install: `scripts/bundle.sh && scripts/install.sh` (source: scripts/)
-- release archive (signed, notarized, stapled): `scripts/release.sh` (source: scripts/release.sh)
+- release zip and DMG (signed, notarized, stapled): `scripts/release.sh` (source: scripts/release.sh, scripts/dmg.sh)
 - format: `swift format --in-place --recursive Package.swift Sources Tests` (source: .swift-format)
 - sensors on real hardware: `swift run ftop doctor` (source: Sources/ftop/main.swift)
 - reference images: `FTOP_RENDER_DIR=<dir> swift test --filter RenderTests` (source: Tests/FtopUITests/RenderTests.swift)
@@ -43,7 +43,7 @@ verified: 2026-10-06 · owner rules: AGENTS.md · status tokens: off
 ## Delivery
 - license: MIT (source: LICENSE)
 - ci: none; do not add GitHub Actions without the owner asking (source: legacy AGENTS.md in the archive, user-stated)
-- deploy: `scripts/install.sh` into ~/Applications and ~/.local/bin; releases are a tag `v<version>` with `Ftop-<version>-arm64.zip` attached; from 0.2.6 the archive comes from `scripts/release.sh`, signed with the Developer ID of team YHQ2HJF58N and notarized (needs the notarytool keychain profile `ftop`), and the updater of a signed copy accepts only that signer (source: scripts/install.sh, scripts/release.sh, github.com/Nongfsq/ftop/releases)
+- deploy: `scripts/install.sh` into ~/Applications and ~/.local/bin; releases are a tag `v<version>` with `Ftop-<version>-arm64.zip` attached; from 0.2.6 the archive comes from `scripts/release.sh`, signed with the Developer ID of team YHQ2HJF58N and notarized (needs the notarytool keychain profile `ftop`), and the updater of a signed copy accepts only that signer; the updater downloads only the zip, and `scripts/dmg.sh` (called by `scripts/release.sh`) also makes `Ftop-<version>-arm64.dmg`, signed, notarized, and stapled, as a drag-to-Applications download (source: scripts/dmg.sh, scripts/install.sh, scripts/release.sh, github.com/Nongfsq/ftop/releases)
 
 ## Skill applicability
 - frank-deploy, frank-github-actions-ci: not applicable — no CI or hosting (source: Delivery)

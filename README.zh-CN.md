@@ -92,13 +92,18 @@ ftop 用来替代你常年开在终端标签页里的监视工具，换成一个
 
 要求：Apple Silicon Mac，macOS 15 或更新。
 
-**用发布包。** 在[发布页](https://github.com/Nongfsq/ftop/releases/latest)下载
-`Ftop-<版本>-arm64.zip`，解压后把 `Ftop.app` 移到 `~/Applications`。然后把命令链接到
-`PATH` 里的某个目录：
+**用发布包。** 在[发布页](https://github.com/Nongfsq/ftop/releases/latest)下载任意一个文件：
+
+- `Ftop-<版本>-arm64.dmg`：打开后把 `Ftop.app` 拖到“应用程序”文件夹。
+- `Ftop-<版本>-arm64.zip`：解压后把 `Ftop.app` 移到 `~/Applications`。
+
+然后按你放的位置，把命令链接到 `PATH` 里的某个目录：
 
 ```bash
-mkdir -p ~/.local/bin && ln -sfn ~/Applications/Ftop.app/Contents/MacOS/ftop ~/.local/bin/ftop
+mkdir -p ~/.local/bin && ln -sfn /Applications/Ftop.app/Contents/MacOS/ftop ~/.local/bin/ftop
 ```
+
+如果放在 `~/Applications`，把路径换成 `~/Applications/Ftop.app`。只保留一份；更新会原地替换应用。
 
 从 0.2.6 起，应用用 Developer ID 签名并经过苹果公证，下载后可以像普通应用一样直接打开。
 
