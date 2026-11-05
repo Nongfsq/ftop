@@ -52,8 +52,9 @@
   outside code without the owner asking.
 - Advertisements, invitations, and anything not about ftop: close as not planned and
   lock as spam, then tell the owner, who deletes the issue and blocks the account.
-- Homebrew and other third-party packaging are declined; the README links only to
-  installs this project maintains.
+- The project maintains the official Homebrew cask `ftop` (homebrew/homebrew-cask).
+  Other packaging, such as taps and other package managers, is declined; the README
+  links only to installs this project maintains.
 - A real report (a reading wrong or missing, with `ftop doctor` output) is answered,
   even when the form was skipped: ask for what is missing instead of closing it.
 - Replies, closures, and anything posted under the owner's account still need the

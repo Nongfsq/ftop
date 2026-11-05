@@ -21,8 +21,9 @@ solution. Most suggestions are declined, because of what ftop is:
 - It stays usable at every window size, so anything added to the panel takes room
   from something else.
 - It supports Apple Silicon and macOS 15 or later.
-- It is installed from the release page or from source. There is no Homebrew formula
-  or cask, and the README does not link to third-party packages.
+- It is installed from the release page, from source, or with the official Homebrew
+  cask, which this project keeps up to date. Other packages, such as taps or other
+  package managers, are declined, and the README does not link to them.
 
 An issue is closed without a reply, and may be locked or deleted, when it is:
 
