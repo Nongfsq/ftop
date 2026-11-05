@@ -220,7 +220,14 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
             var three = state
             three.config.menuBarShows = [.memory, .download, .upload]
             three.config.resizeEdges = false
-            for (name, shown, dark) in [("", state, true), ("", state, false), ("-three", three, false)] {
+            // "Open at login" in the states that change its text.
+            var approval = state
+            approval.loginItem = .needsApproval
+            var elsewhere = state
+            elsewhere.loginItem = .notInstalled
+            for (name, shown, dark) in [
+                ("", state, true), ("", state, false), ("-three", three, false), ("-login-approval", approval, false), ("-login-elsewhere", elsewhere, true),
+            ] {
                 let content = ControlPanel.picture(shown, expanded: true)
                 let window = NSWindow(contentRect: content.frame, styleMask: [.borderless], backing: .buffered, defer: false)
                 window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
