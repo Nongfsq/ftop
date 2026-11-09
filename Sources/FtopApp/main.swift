@@ -465,6 +465,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
             statusItem = item
         }
+        // Command-dragging the item off the bar makes the system remember it as hidden, and
+        // a new item inherits that. The config is what decides, so a wanted item is shown.
+        if statusItem?.isVisible == false { statusItem?.isVisible = true }
         // A glyph says what each number measures. Other readings have other widths and no figures yet.
         let metrics = model.config.menuBarShows
         guard metrics != statusReadings.map(\.metric) else { return }
