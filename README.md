@@ -102,6 +102,15 @@ With system processes granted (below), the helper that lists them adds about 0.5
 
 Requirements: an Apple Silicon Mac with macOS 15 or later.
 
+**With Homebrew.**
+
+```bash
+brew install --cask ftop
+```
+
+This puts `Ftop.app` in `/Applications` and links `ftop` onto your `PATH`. The app keeps
+itself up to date, so `brew upgrade` skips it unless you add `--greedy`.
+
 **From a release.** On the [releases page](https://github.com/Nongfsq/ftop/releases/latest),
 download either file:
 
