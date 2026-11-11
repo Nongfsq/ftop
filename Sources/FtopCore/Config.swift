@@ -16,13 +16,13 @@ public enum PaletteID: String, Sendable, Codable, CaseIterable {
 
 /// A reading the menu bar can show; it shows one to three of them.
 public enum MenuBarMetric: String, Sendable, Codable, CaseIterable {
-    case cpu, memory, gpu, download, upload, power
+    case cpu, memory, swap, gpu, download, upload, power
 
     /// The module that has to be read for it, whether or not the panel shows that module.
     public var module: ModuleID {
         switch self {
         case .cpu: .cpu
-        case .memory: .memory
+        case .memory, .swap: .memory
         case .gpu: .gpu
         case .download, .upload: .network
         case .power: .power
@@ -34,6 +34,7 @@ public enum MenuBarMetric: String, Sendable, Codable, CaseIterable {
         switch self {
         case .cpu: snapshot.cpu.value.map { Format.share($0.usage) }
         case .memory: snapshot.memory.value.map { Format.share($0.usedFraction) }
+        case .swap: snapshot.memory.value.map { Format.swap($0.swapUsed) }
         case .gpu: snapshot.gpu.value.map { Format.share($0.usage) }
         case .download: snapshot.network.value.map { Format.compactRate($0.downBytesPerSecond) }
         case .upload: snapshot.network.value.map { Format.compactRate($0.upBytesPerSecond) }
@@ -198,8 +199,8 @@ public struct Config: Sendable, Codable, Equatable {
           // Show readings in the menu bar; click them to show or hide the panel.
           menuBar: true,
 
-          // Which readings, one to three: "cpu", "memory", "gpu", "download", "upload",
-          // "power". They do not have to be ones the panel shows.
+          // Which readings, one to three: "cpu", "memory", "swap", "gpu", "download",
+          // "upload", "power". They do not have to be ones the panel shows.
           menuBarShows: ["cpu"],
 
           // Near the panel's edges and corners the pointer turns into the resize cursor,

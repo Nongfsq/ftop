@@ -110,6 +110,9 @@ import Testing
         #expect(try Config.decode(Data(#"{ menuBarShows: ["memory", "cpu", "memory"] }"#.utf8)).menuBarShows == [.cpu, .memory])
         #expect(try Config.decode(Data(#"{ menuBarShows: ["power", "upload", "gpu", "cpu"] }"#.utf8)).menuBarShows == [.cpu, .gpu, .upload])
         #expect(try Config.decode(Data(#"{ menuBarShows: [] }"#.utf8)).menuBarShows == [.cpu])
+        // Swap sits after memory, which it is read with.
+        #expect(try Config.decode(Data(#"{ menuBarShows: ["gpu", "swap", "memory"] }"#.utf8)).menuBarShows == [.memory, .swap, .gpu])
+        #expect(MenuBarMetric.swap.module == .memory)
         let off = "off"
         let snapshot = Snapshot(
             time: Date(), cpu: .unavailable(off), memory: .unavailable(off), network: .value(NetworkSample(downBytesPerSecond: 1_240_000, upBytesPerSecond: 84_400)),
@@ -120,6 +123,10 @@ import Testing
         #expect(MenuBarMetric.power.figure(in: snapshot)?.shortText == "119W")
         // Not reported is not zero.
         #expect(MenuBarMetric.gpu.figure(in: snapshot) == nil)
+        #expect(MenuBarMetric.swap.figure(in: snapshot) == nil)
+        // No swap in use is a reading, written as the panel's hover writes it.
+        #expect(Format.swap(0).shortText == "0.0G")
+        #expect(Format.swap(1_395_864_371).shortText == "1.3G")
         #expect(snapshot.limited(to: [.cpu]).network.value == nil)
     }
 

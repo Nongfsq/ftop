@@ -711,6 +711,25 @@ The rest of that branch (a settings window, a storage reading) was declined.
   back under the same id and name within one sample reads as "No longer this process"
   until its id leaves the list. Those refuse; they never signal the wrong process.
 
+## Swap as a menu bar reading (2026-11-11, approved; built)
+
+Suggested in issue 39 by someone who reads the menu bar to tell whether the Mac is short
+on memory. The owner picked the glyph from six drawn on one board, in the menu bar at
+its pixels on light and dark bars ("用 A"). It extends "Resize cursors and up to three
+menu bar readings" above.
+
+- `menuBarShows` can name "swap": the swap in use, in binary gigabytes with one decimal,
+  as the panel's hover writes it ("1.3G"; none in use is "0.0G", a reading, not the
+  dash). It is read with memory and sits after it in the fixed order: CPU, memory,
+  swap, GPU, download, upload, power. It counts toward the three. The panel is unchanged.
+- The glyph is the exchange sign, drawn like the chip and the module: an arrow to the
+  right over an arrow to the left, each with one barb, 11 units wide. Left and right,
+  so it does not read as the network's up and down.
+- Not chosen: the module with an arrow out of it (a sign or a tag at 12 pt); a drive
+  cylinder (reads as disk use, which ftop does not show); two stacked modules (reads as
+  copy or windows); the system's `arrow.left.arrow.right` (thinner than the drawn
+  glyphs beside it); a small capsule like the panel's (reads as a switch).
+
 ## Rejected by the owner (do not reintroduce)
 
 - A processor figure larger than the figures beside it (2026-10-08): the core columns

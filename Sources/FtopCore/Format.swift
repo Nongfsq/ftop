@@ -61,6 +61,11 @@ public enum Format {
         decimal(Double(bytes) / 1_073_741_824)
     }
 
+    /// Swap in use for the menu bar: binary gigabytes with one decimal, as the panel's hover.
+    public static func swap(_ bytes: UInt64) -> Quantity {
+        Quantity(number: gigabytes(bytes), unit: "GB", shortUnit: "G")
+    }
+
     /// Whole gigabytes when exact, otherwise one decimal: "36", "17.5".
     public static func gigabytesCompact(_ bytes: UInt64) -> String {
         let value = Double(bytes) / 1_073_741_824
