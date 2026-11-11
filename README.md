@@ -66,8 +66,8 @@ With *Reduce Motion* on in macOS, all of this becomes plain fades.
 ## Menu bar
 
 The menu bar shows CPU by default, as a glyph and its number. Up to three readings can
-sit there side by side: CPU, memory, GPU, download, upload, or power. Click it to show
-or hide the panel.
+sit there side by side: CPU, memory, swap, GPU, download, upload, or power. Click it to
+show or hide the panel.
 
 <p align="center"><img src="docs/media/menubar.png" width="264" alt="The menu bar with one reading, two, and three: CPU, then memory, then GPU"></p>
 
@@ -157,8 +157,8 @@ ftop doctor     # which readings are available on this Mac, and why not
   pointer turns into the resize cursor (**Resize** in the settings turns this off).
 - Move the pointer to the top edge for two buttons: pin (keep on top) and hide.
 - The menu bar shows one to three readings, each a glyph and its number: CPU by
-  default, and any of memory, GPU, download, upload, or power (under **More** in the
-  settings). Click it to show or hide the panel.
+  default, and any of memory, swap, GPU, download, upload, or power (under **More** in
+  the settings). Click it to show or hide the panel.
 - Hover over a core, the memory bar, or the GPU for detail; click a process for its card.
 - Right-click for the settings.
 

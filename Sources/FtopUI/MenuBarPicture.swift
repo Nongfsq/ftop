@@ -12,6 +12,7 @@ public enum MenuBarPicture {
         switch metric {
         case .cpu: .cpu
         case .memory: .memory
+        case .swap: .swap
         case .gpu: .gpu
         case .download: .download
         case .upload: .upload

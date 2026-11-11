@@ -3,14 +3,14 @@ import FtopCore
 
 /// The small picture inside a badge. Each reading has one, and it is the same picture at every window size.
 public enum Glyph: Hashable, Sendable {
-    case cpu, gpu, memory, temperature, download, upload, adapter, power
+    case cpu, gpu, memory, swap, temperature, download, upload, adapter, power
     /// The whole machine, as the kind of Mac it is; a laptop where the kind is not known.
     case machine(MachineKind?)
     /// A process that belongs to no app.
     case process
 
     /// System symbols, where their shape stays clear at badge size. The chip, the memory
-    /// module, and the thermometer are drawn here instead: the system's have pins and
+    /// module, the swap sign, and the thermometer are drawn here instead: the system's have pins and
     /// tick marks that close up into a blot this small.
     var symbol: String? {
         switch self {
@@ -27,7 +27,7 @@ public enum Glyph: Hashable, Sendable {
             case .laptop, nil: "laptopcomputer"
             }
         case .power: "bolt.fill"
-        case .cpu, .memory, .temperature, .process: nil
+        case .cpu, .memory, .swap, .temperature, .process: nil
         }
     }
 }
@@ -69,7 +69,7 @@ enum GlyphArt {
         let unit = side / PanelStyle.glyphExtent
         switch glyph {
         case .cpu: return (12 + PanelStyle.glyphLine) * unit
-        case .memory: return (11 + PanelStyle.glyphLine) * unit
+        case .memory, .swap: return (11 + PanelStyle.glyphLine) * unit
         default: return side
         }
     }
@@ -161,6 +161,13 @@ enum GlyphArt {
                 line(offset, 5, offset, 3)
                 line(offset, 11, offset, 13)
             }
+        case .swap:
+            // The exchange sign: over to the right on top, back to the left below. The
+            // system's two arrows are thinner than the drawn glyphs beside them.
+            line(2.5, 5.5, 13.5, 5.5)
+            line(13.5, 5.5, 10.8, 2.8)
+            line(2.5, 10.5, 13.5, 10.5)
+            line(2.5, 10.5, 5.2, 13.2)
         case .temperature:
             // A stem with a round top that opens into the bulb, as one outline.
             let stem: CGFloat = 1.6

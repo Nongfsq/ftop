@@ -211,6 +211,7 @@ public final class ControlPanel: NSObject {
         switch metric {
         case .cpu: "CPU"
         case .memory: Strings.pick("Memory", "内存")
+        case .swap: Strings.swap
         case .gpu: "GPU"
         case .download: Strings.pick("Download", "下载")
         case .upload: Strings.pick("Upload", "上传")

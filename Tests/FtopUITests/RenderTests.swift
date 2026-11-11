@@ -385,7 +385,8 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
         let scale = CGFloat(renderScale ?? 2)
         let height: CGFloat = 24
         let figures: [(MenuBarMetric, Format.Quantity?)] = [
-            (.cpu, Format.share(0.18)), (.cpu, Format.share(1)), (.cpu, Format.share(0.07)), (.memory, Format.share(0.62)), (.gpu, Format.share(0.23)),
+            (.cpu, Format.share(0.18)), (.cpu, Format.share(1)), (.cpu, Format.share(0.07)), (.memory, Format.share(0.62)), (.swap, Format.swap(1_395_864_371)),
+            (.gpu, Format.share(0.23)),
             (.download, Format.compactRate(1_200_000)), (.upload, Format.compactRate(84_000)), (.power, Format.compactWatts(18.6)), (.gpu, nil),
         ]
         // Each figure with exactly its own room, then a short one in the room a longer one left behind.
@@ -396,7 +397,8 @@ private let demoFrameCount = ProcessInfo.processInfo.environment["FTOP_DEMO_FRAM
         let pairs: [(MenuBarMetric, Format.Quantity?)] = [(.cpu, Format.share(0.18)), (.memory, Format.share(0.62))]
         let trio = pairs + [(.gpu, Format.share(0.23))]
         let mixed: [(MenuBarMetric, Format.Quantity?)] = [(.cpu, Format.share(1)), (.download, Format.compactRate(1_200_000)), (.power, nil)]
-        for group in [pairs, trio, mixed] {
+        let memory: [(MenuBarMetric, Format.Quantity?)] = [(.memory, Format.share(0.62)), (.swap, Format.swap(0)), (.download, Format.compactRate(84_000))]
+        for group in [pairs, trio, mixed, memory] {
             items.append(group.map { MenuBarPicture.Entry($0.0, figure: $0.1, room: MenuBarPicture.figureWidth($0.1)) })
         }
         let gap: CGFloat = 16
